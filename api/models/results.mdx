@@ -1,0 +1,56 @@
+---
+title: Result models
+description: Models representing flight search results and flight details
+---
+
+## FlightResult
+
+Complete flight search result with pricing and timing information.
+
+<ResponseField name="legs" type="list[FlightLeg]" required>
+  List of flight legs that make up this flight option
+</ResponseField>
+
+<ResponseField name="price" type="float" required>
+  Total price in the specified currency (non-negative)
+</ResponseField>
+
+<ResponseField name="duration" type="int" required>
+  Total flight duration in minutes (positive integer)
+</ResponseField>
+
+<ResponseField name="stops" type="int" required>
+  Number of stops in the flight (non-negative)
+</ResponseField>
+
+## FlightLeg
+
+A single flight leg (segment) with airline and timing details. Each leg represents one continuous flight from departure to arrival.
+
+<ResponseField name="airline" type="Airline" required>
+  Operating airline for this leg
+</ResponseField>
+
+<ResponseField name="flight_number" type="str" required>
+  Flight number
+</ResponseField>
+
+<ResponseField name="departure_airport" type="Airport" required>
+  Departure airport IATA code
+</ResponseField>
+
+<ResponseField name="arrival_airport" type="Airport" required>
+  Arrival airport IATA code
+</ResponseField>
+
+<ResponseField name="departure_datetime" type="datetime" required>
+  Departure date and time
+</ResponseField>
+
+<ResponseField name="arrival_datetime" type="datetime" required>
+  Arrival date and time
+</ResponseField>
+
+<ResponseField name="duration" type="int" required>
+  Leg duration in minutes (positive integer)
+</ResponseField>

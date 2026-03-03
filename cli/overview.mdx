@@ -1,0 +1,134 @@
+---
+title: CLI overview
+description: Command-line interface for searching flights and finding the best travel dates
+---
+
+The Fli CLI provides a fast, terminal-based interface for searching flights using Google Flights data. It offers two main commands for different search scenarios.
+
+## Installation
+
+Install Fli using pip or uv:
+
+```bash
+pip install fli
+```
+
+```bash
+uv pip install fli
+```
+
+## Quick start
+
+Search for flights with just the essentials:
+
+```bash
+fli JFK LHR 2025-10-25
+```
+
+The CLI automatically treats non-command arguments as flight searches, so you can omit the `flights` command.
+
+## Main commands
+
+### flights
+
+Search for flights on a specific date with various filtering options.
+
+```bash
+fli flights JFK LHR 2025-10-25 --return 2025-11-01
+```
+
+Learn more in [flights command](/cli/flights-command).
+
+### dates
+
+Find the cheapest dates to fly within a date range.
+
+```bash
+fli dates LAX MIA --from 2025-12-01 --to 2025-12-31
+```
+
+Learn more in [dates command](/cli/dates-command).
+
+## Smart command inference
+
+The CLI is designed for speed. If you don't specify a command, it assumes you're searching for flights:
+
+<CodeGroup>
+
+```bash Standard syntax
+fli flights JFK LHR 2025-10-25
+```
+
+```bash Shorthand (same result)
+fli JFK LHR 2025-10-25
+```
+
+</CodeGroup>
+
+This makes quick searches faster to type.
+
+## Getting help
+
+View available commands:
+
+```bash
+fli --help
+```
+
+Get help for a specific command:
+
+```bash
+fli flights --help
+fli dates --help
+```
+
+## Terminal output
+
+Fli uses Rich terminal formatting to display results in beautiful, readable tables with:
+
+- Color-coded flight information
+- Formatted prices and durations
+- Airline and airport details
+- Clear segment breakdowns for multi-leg flights
+- Price trend charts for date searches
+
+<Note>
+The CLI displays up to 10 flight options by default, sorted by your chosen criteria (price, duration, or time).
+</Note>
+
+## Common use cases
+
+### One-way flight search
+
+```bash
+fli JFK LAX 2025-10-25
+```
+
+### Round-trip with specific airlines
+
+```bash
+fli JFK LHR 2025-10-25 --return 2025-11-01 --airlines BA AA
+```
+
+### Business class non-stop flights
+
+```bash
+fli SFO NRT 2025-11-15 --class BUSINESS --stops 0
+```
+
+### Find cheapest weekend departures
+
+```bash
+fli dates JFK MIA --from 2025-12-01 --to 2025-12-31 --friday --saturday --sunday
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="flights command" icon="plane-departure" href="/cli/flights-command">
+    Search for flights on specific dates
+  </Card>
+  <Card title="dates command" icon="calendar-days" href="/cli/dates-command">
+    Find the cheapest travel dates
+  </Card>
+</CardGroup>

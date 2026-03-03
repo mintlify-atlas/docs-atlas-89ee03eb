@@ -1,0 +1,114 @@
+---
+title: SearchDates
+description: Date-based flight search for finding the cheapest dates to fly
+---
+
+## Overview
+
+The `SearchDates` class provides methods to search for flight prices across a date range, useful for finding the cheapest dates to fly. It uses Google Flights' calendar view API to find the best prices for each date.
+
+## Class initialization
+
+```python
+from fli.search import SearchDates
+
+searcher = SearchDates()
+```
+
+Initializes the search client for date-based searches. No parameters required.
+
+## Methods
+
+### search
+
+Search for flight prices across a date range and search parameters.
+
+```python
+def search(
+    self,
+    filters: DateSearchFilters
+) -> list[DatePrice] | None
+```
+
+<ParamField path="filters" type="DateSearchFilters" required>
+  Search parameters including date range, airports, and preferences
+</ParamField>
+
+<ResponseField name="return" type="list[DatePrice] | None">
+  List of `DatePrice` objects containing date and price pairs, or `None` if no results found
+</ResponseField>
+
+**Raises:**
+- `Exception`: If the search fails or returns invalid data
+
+**Notes:**
+- For date ranges larger than 61 days, the method automatically splits the search into multiple chunks
+- Maximum search horizon is 305 days in the future
+
+**Example:**
+
+```python
+from fli.search import SearchDates
+from fli.models import DateSearchFilters, FlightSegment, Airport
+from fli.models.google_flights.base import TripType
+
+# Create search filters
+filters = DateSearchFilters(
+    trip_type=TripType.ROUND_TRIP,
+    flight_segments=[
+        FlightSegment(
+            origin=Airport.LAX,
+            destination=Airport.JFK,
+            travel_date="2026-04-01"
+        ),
+        FlightSegment(
+            origin=Airport.JFK,
+            destination=Airport.LAX,
+            travel_date="2026-04-08"
+        )
+    ],
+    from_date="2026-04-01",
+    to_date="2026-05-31",
+    duration=7  # 7-day round trips
+)
+
+# Search for cheapest dates
+searcher = SearchDates()
+results = searcher.search(filters)
+
+if results:
+    for date_price in results:
+        if len(date_price.date) == 1:
+            print(f"{date_price.date[0].strftime('%Y-%m-%d')}: ${date_price.price}")
+        else:
+            print(f"{date_price.date[0].strftime('%Y-%m-%d')} - {date_price.date[1].strftime('%Y-%m-%d')}: ${date_price.price}")
+```
+
+## Return types
+
+### DatePrice
+
+Each `DatePrice` object contains:
+
+<ResponseField name="date" type="tuple[datetime] | tuple[datetime, datetime]">
+  For one-way trips: single-element tuple with departure date
+  
+  For round-trip: two-element tuple with (departure date, return date)
+</ResponseField>
+
+<ResponseField name="price" type="float">
+  Flight price for the specified date(s)
+</ResponseField>
+
+## Constants
+
+<ResponseField name="MAX_DAYS_PER_SEARCH" type="int" default="61">
+  Maximum number of days that can be searched in a single API request. Larger date ranges are automatically split into multiple chunks.
+</ResponseField>
+
+## Notes
+
+- The search automatically handles large date ranges by splitting them into 61-day chunks
+- Only dates with available pricing data are returned in the results
+- The search client includes automatic rate limiting (10 req/sec) and retries
+- For round-trip searches, the `duration` parameter in filters controls the length of the trip

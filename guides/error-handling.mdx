@@ -1,0 +1,411 @@
+---
+title: Error handling
+description: Handle errors, implement retries, and work with rate limits in Fli
+---
+
+Fli includes built-in error handling, automatic retries, and rate limiting to ensure reliable flight searches. This guide covers how to work with these features and implement additional error handling in your application.
+
+## Built-in error handling
+
+Fli's HTTP client includes automatic error handling with exponential backoff:
+
+```python
+from fli.search import SearchFlights
+from fli.models import FlightSearchFilters, PassengerInfo, FlightSegment, Airport
+
+# The client automatically handles retries
+search = SearchFlights()
+
+try:
+    filters = FlightSearchFilters(
+        passenger_info=PassengerInfo(adults=1),
+        flight_segments=[
+            FlightSegment(
+                departure_airport=[[Airport.JFK, 0]],
+                arrival_airport=[[Airport.LAX, 0]],
+                travel_date="2026-04-15"
+            )
+        ]
+    )
+    results = search.search(filters)
+except Exception as e:
+    print(f"Search failed: {e}")
+```
+
+### What's handled automatically
+
+The HTTP client (`fli/search/client.py:37-39`) automatically handles:
+
+- **Rate limiting**: 10 requests per second maximum
+- **Automatic retries**: Up to 3 attempts with exponential backoff
+- **HTTP errors**: Raises exceptions with descriptive messages
+
+<Note>
+The rate limiter uses the `@sleep_and_retry` and `@limits` decorators to ensure you never exceed Google Flights' rate limits.
+</Note>
+
+## Rate limiting
+
+Fli enforces a rate limit of 10 requests per second to prevent overwhelming the Google Flights API:
+
+```python
+from fli.search.client import get_client
+
+# Get the shared client instance
+client = get_client()
+
+# Make requests - automatically rate limited
+for filters in filter_list:
+    results = search.search(filters)  # Automatically waits if rate limit exceeded
+```
+
+### How it works
+
+The client implementation (`fli/search/client.py:37-39`):
+
+```python
+@sleep_and_retry
+@limits(calls=10, period=1)
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(), reraise=True)
+def post(self, url: str, **kwargs: Any) -> requests.Response:
+    # ... request logic
+```
+
+- `@limits(calls=10, period=1)` - Maximum 10 calls per second
+- `@sleep_and_retry` - Automatically waits when limit is reached
+- `@retry` - Retries failed requests with exponential backoff
+
+<Warning>
+Do not create multiple `SearchFlights` instances in rapid succession. Use a single instance or the shared client via `get_client()` to ensure rate limiting works correctly.
+</Warning>
+
+## Retry logic
+
+### Built-in retries
+
+Fli automatically retries failed requests up to 3 times with exponential backoff:
+
+```python
+from fli.search import SearchFlights
+
+search = SearchFlights()
+
+# This will automatically retry up to 3 times on failure
+results = search.search(filters)
+```
+
+The exponential backoff means:
+- First retry: ~1 second delay
+- Second retry: ~2 seconds delay  
+- Third retry: ~4 seconds delay
+
+### Custom retry logic
+
+For more control, implement your own retry logic:
+
+```python
+from fli.search import SearchFlights
+from fli.models import FlightSearchFilters
+
+def simple_retry_search(filters: FlightSearchFilters, max_attempts=3):
+    """Simple retry logic without external dependencies."""
+    search = SearchFlights()
+    
+    for attempt in range(max_attempts):
+        try:
+            print(f"Attempt {attempt + 1}/{max_attempts}")
+            results = search.search(filters)
+            if not results:
+                raise ValueError("No results found")
+            return results
+        except Exception as e:
+            print(f"Search failed: {str(e)}")
+            if attempt == max_attempts - 1:  # Last attempt
+                raise
+            print("Retrying...")
+    
+    return None
+```
+
+### Advanced retry with Tenacity
+
+For production applications, use the `tenacity` library for robust retry logic:
+
+```python
+from tenacity import retry, stop_after_attempt, wait_exponential
+from fli.search import SearchFlights
+from fli.models import FlightSearchFilters
+
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=1, min=4, max=60)
+)
+def search_with_retry(filters: FlightSearchFilters):
+    """Advanced retry logic with exponential backoff."""
+    search = SearchFlights()
+    results = search.search(filters)
+    if not results:
+        raise ValueError("No results found")
+    return results
+
+# Usage
+try:
+    results = search_with_retry(filters)
+    print(f"Found {len(results)} flights")
+except Exception as e:
+    print(f"All retry attempts failed: {e}")
+```
+
+<Accordion title="Complete retry example">
+```python
+from datetime import datetime, timedelta
+from tenacity import retry, stop_after_attempt, wait_exponential
+from fli.models import Airport, FlightSearchFilters, FlightSegment, PassengerInfo
+from fli.search import SearchFlights
+
+@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=60))
+def search_with_retry(filters: FlightSearchFilters):
+    """Advanced retry logic with exponential backoff."""
+    search = SearchFlights()
+    try:
+        results = search.search(filters)
+        if not results:
+            raise ValueError("No results found")
+        return results
+    except Exception as e:
+        print(f"Search failed: {str(e)}")
+        raise  # Retry will handle this
+
+filters = FlightSearchFilters(
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LAX, 0]],
+            travel_date=(datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+        )
+    ],
+)
+
+try:
+    results = search_with_retry(filters)
+    print(f"Success! Found {len(results)} flights")
+except Exception as e:
+    print(f"All retry attempts failed: {e}")
+```
+</Accordion>
+
+## Validation errors
+
+Fli uses Pydantic for data validation. Invalid inputs raise `ValidationError`:
+
+```python
+from pydantic import ValidationError
+from fli.models import FlightSearchFilters, FlightSegment, Airport, PassengerInfo
+
+try:
+    filters = FlightSearchFilters(
+        passenger_info=PassengerInfo(adults=1),
+        flight_segments=[
+            FlightSegment(
+                departure_airport=[[Airport.JFK, 0]],
+                arrival_airport=[[Airport.JFK, 0]],  # Invalid: same as departure
+                travel_date="2026-04-15"
+            )
+        ]
+    )
+except ValidationError as e:
+    print(f"Validation error: {e}")
+    # Handle validation errors appropriately
+```
+
+### Common validation errors
+
+<Accordion title="Same departure and arrival airports">
+```python
+# ❌ Invalid
+FlightSegment(
+    departure_airport=[[Airport.JFK, 0]],
+    arrival_airport=[[Airport.JFK, 0]],  # Same as departure
+    travel_date="2026-04-15"
+)
+# Error: "Departure and arrival airports must be different"
+```
+</Accordion>
+
+<Accordion title="Travel date in the past">
+```python
+# ❌ Invalid
+FlightSegment(
+    departure_airport=[[Airport.JFK, 0]],
+    arrival_airport=[[Airport.LAX, 0]],
+    travel_date="2024-01-01"  # In the past
+)
+# Error: "Travel date cannot be in the past"
+```
+</Accordion>
+
+<Accordion title="Invalid time restrictions">
+```python
+# ❌ Invalid
+TimeRestrictions(
+    earliest_departure=10,
+    latest_departure=6  # Earlier than earliest!
+)
+# The validator will automatically swap these values
+```
+</Accordion>
+
+## Parsing errors
+
+When using the parsing utilities, catch `ParseError` exceptions:
+
+```python
+from fli.core.parsers import parse_airlines, parse_cabin_class, ParseError
+
+try:
+    airlines = parse_airlines(["BA", "INVALID"])
+except ParseError as e:
+    print(f"Invalid airline code: {e}")
+
+try:
+    cabin_class = parse_cabin_class("SUPER_FIRST")  # Not a valid cabin class
+except ParseError as e:
+    print(f"Invalid cabin class: {e}")
+```
+
+### Handling parse errors
+
+```python
+from fli.core.parsers import resolve_airport, ParseError
+
+def safe_parse_airport(code: str):
+    """Safely parse an airport code with fallback."""
+    try:
+        return resolve_airport(code)
+    except ParseError:
+        print(f"Warning: Unknown airport code '{code}', using default")
+        return None
+
+airport = safe_parse_airport("INVALID")
+if airport:
+    # Use the airport
+    pass
+else:
+    # Handle missing airport
+    pass
+```
+
+## API errors
+
+Search operations can fail for various reasons:
+
+```python
+from fli.search import SearchFlights
+
+search = SearchFlights()
+
+try:
+    results = search.search(filters)
+    
+    if not results:
+        print("No flights found for the given criteria")
+    else:
+        print(f"Found {len(results)} flights")
+        
+except Exception as e:
+    error_msg = str(e)
+    
+    if "GET request failed" in error_msg or "POST request failed" in error_msg:
+        print(f"Network error: {error_msg}")
+    elif "Search failed" in error_msg:
+        print(f"API error: {error_msg}")
+    else:
+        print(f"Unexpected error: {error_msg}")
+```
+
+<Note>
+The error messages from `SearchFlights.search()` include context about what failed, making debugging easier.
+</Note>
+
+## Best practices
+
+### 1. Always use try-except blocks
+
+```python
+try:
+    results = search.search(filters)
+except Exception as e:
+    # Log error, notify user, etc.
+    logger.error(f"Flight search failed: {e}")
+```
+
+### 2. Validate inputs before searching
+
+```python
+from pydantic import ValidationError
+
+try:
+    filters = FlightSearchFilters(
+        passenger_info=PassengerInfo(adults=1),
+        flight_segments=[segment]
+    )
+    results = search.search(filters)
+except ValidationError as e:
+    print(f"Invalid search parameters: {e}")
+except Exception as e:
+    print(f"Search failed: {e}")
+```
+
+### 3. Handle empty results gracefully
+
+```python
+results = search.search(filters)
+
+if not results:
+    print("No flights found. Try adjusting your search criteria.")
+else:
+    for flight in results:
+        print(f"${flight.price} - {flight.duration} minutes")
+```
+
+### 4. Use the shared client instance
+
+```python
+from fli.search.client import get_client
+
+# Reuse the same client for multiple searches
+client = get_client()
+
+# Perform multiple searches
+for filters in filter_list:
+    results = search.search(filters)
+```
+
+### 5. Log errors for debugging
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+try:
+    results = search.search(filters)
+except Exception as e:
+    logger.exception("Flight search failed")
+    raise
+```
+
+## Debugging
+
+When troubleshooting issues:
+
+1. **Check validation errors** - Ensure all required fields are provided and valid
+2. **Verify date formats** - Dates must be in `YYYY-MM-DD` format
+3. **Confirm airport/airline codes** - Use valid IATA codes from the enums
+4. **Check rate limits** - If seeing consistent failures, you may be hitting rate limits
+5. **Review error messages** - Fli provides descriptive error messages with context
+
+<Warning>
+If you encounter persistent API errors, ensure you're not being blocked by Google Flights. The built-in rate limiting and browser impersonation help prevent this, but excessive requests can still trigger blocks.
+</Warning>

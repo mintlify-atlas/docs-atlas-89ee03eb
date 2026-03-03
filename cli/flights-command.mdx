@@ -1,0 +1,262 @@
+---
+title: flights command
+description: Search for flights on specific dates with filtering and sorting options
+---
+
+The `flights` command searches for available flights on a specific departure date, with optional return date for round-trip searches.
+
+## Syntax
+
+```bash
+fli flights ORIGIN DESTINATION DEPARTURE_DATE [OPTIONS]
+```
+
+### Required arguments
+
+- `ORIGIN` - Departure airport IATA code (e.g., JFK, LAX, LHR)
+- `DESTINATION` - Arrival airport IATA code
+- `DEPARTURE_DATE` - Travel date in YYYY-MM-DD format
+
+## Options
+
+### Return date
+
+```bash
+--return DATE, -r DATE
+```
+
+Specify a return date for round-trip searches. Date must be in YYYY-MM-DD format.
+
+**Default:** None (one-way search)
+
+**Example:**
+```bash
+fli flights JFK LHR 2025-10-25 --return 2025-11-01
+```
+
+### Departure time window
+
+```bash
+--time RANGE, -t RANGE
+```
+
+Filter flights by departure time using 24-hour format. Specify as `START-END` (e.g., `6-20` for 6 AM to 8 PM).
+
+**Default:** Any time
+
+**Example:**
+```bash
+fli flights SFO NYC 2025-10-25 --time 6-20
+```
+
+### Airlines
+
+```bash
+--airlines CODES, -a CODES
+```
+
+Filter by specific airlines using IATA codes. Provide multiple codes separated by spaces.
+
+**Default:** All airlines
+
+**Example:**
+```bash
+fli flights JFK LHR 2025-10-25 --airlines BA AA UA
+```
+
+### Cabin class
+
+```bash
+--class CLASS, -c CLASS
+```
+
+Specify the cabin class for the search.
+
+**Options:**
+- `ECONOMY` (default)
+- `PREMIUM_ECONOMY`
+- `BUSINESS`
+- `FIRST`
+
+**Example:**
+```bash
+fli flights LAX NRT 2025-11-15 --class BUSINESS
+```
+
+### Maximum stops
+
+```bash
+--stops STOPS, -s STOPS
+```
+
+Filter by maximum number of stops.
+
+**Options:**
+- `ANY` (default) - Any number of stops
+- `0` or `NON_STOP` - Non-stop flights only
+- `1` or `ONE_STOP` - Maximum one stop
+- `2+` or `TWO_PLUS_STOPS` - Two or more stops
+
+**Example:**
+```bash
+fli flights JFK SFO 2025-10-25 --stops 0
+```
+
+### Sort order
+
+```bash
+--sort CRITERIA, -o CRITERIA
+```
+
+Sort results by specified criteria.
+
+**Options:**
+- `CHEAPEST` (default) - Lowest price first
+- `DURATION` - Shortest duration first
+- `DEPARTURE_TIME` - Earliest departure first
+- `ARRIVAL_TIME` - Earliest arrival first
+
+**Example:**
+```bash
+fli flights BOS LAX 2025-10-25 --sort DURATION
+```
+
+## Examples
+
+### One-way economy flight
+
+```bash
+fli flights JFK LAX 2025-10-25
+```
+
+Searches for one-way economy flights from New York JFK to Los Angeles LAX on October 25, 2025.
+
+### Round-trip with return date
+
+```bash
+fli flights JFK LHR 2025-10-25 --return 2025-11-01
+```
+
+Searches for round-trip flights from New York to London, departing October 25 and returning November 1.
+
+### Business class non-stop flights
+
+```bash
+fli flights SFO NRT 2025-11-15 --class BUSINESS --stops 0
+```
+
+Searches for non-stop business class flights from San Francisco to Tokyo Narita.
+
+### Morning flights on specific airlines
+
+```bash
+fli flights LAX JFK 2025-10-25 --time 6-12 --airlines AA DL UA
+```
+
+Searches for morning flights (6 AM - 12 PM) from Los Angeles to New York on American, Delta, or United.
+
+### Fastest flights regardless of price
+
+```bash
+fli flights BOS SFO 2025-10-25 --sort DURATION
+```
+
+Searches for flights from Boston to San Francisco, sorted by shortest duration.
+
+### Complete example with multiple filters
+
+```bash
+fli flights JFK LHR 2025-10-25 \
+  --return 2025-11-01 \
+  --class PREMIUM_ECONOMY \
+  --time 18-23 \
+  --airlines BA AA \
+  --stops 0 \
+  --sort DEPARTURE_TIME
+```
+
+Searches for:
+- Round-trip flights from JFK to LHR
+- Premium economy class
+- Evening departures (6 PM - 11 PM)
+- British Airways or American Airlines only
+- Non-stop flights
+- Sorted by earliest departure time
+
+## Output format
+
+The command displays results in formatted terminal tables showing:
+
+```
+┌─ Option 1 of 10 ─────────────────────────────────────────┐
+│ Round-trip Flight Option 1                               │
+│                                                           │
+│ Total Price    $1,245.80                                 │
+│ Outbound Price $632.40                                   │
+│ Return Price   $613.40                                   │
+│ Total Duration 14h 30m                                   │
+│ Total Stops    0                                         │
+│                                                           │
+│ ╭─ Outbound Flight Segments ───────────────────────╮    │
+│ │ Airline │ Flight │ From          │ Departure │...│    │
+│ │ British │ BA112  │ JFK (John F.  │ 18:30     │...│    │
+│ │ Airways │        │ Kennedy Intl) │ 25-Oct    │...│    │
+│ ╰──────────────────────────────────────────────────╯    │
+│                                                           │
+│ ╭─ Return Flight Segments ─────────────────────────╮    │
+│ │ Airline │ Flight │ From          │ Departure │...│    │
+│ │ British │ BA113  │ LHR (London   │ 10:30     │...│    │
+│ │ Airways │        │ Heathrow)     │ 01-Nov    │...│    │
+│ ╰──────────────────────────────────────────────────╯    │
+└───────────────────────────────────────────────────────────┘
+```
+
+Each flight option includes:
+- Total price and breakdown (for round-trips)
+- Total duration and stops
+- Detailed segment information with airlines, flight numbers, airports, and times
+
+<Note>
+Airport names are truncated to the first three words for readability in the terminal output.
+</Note>
+
+## Error handling
+
+The command validates inputs and provides clear error messages:
+
+**Invalid date format:**
+```
+Error: Date must be in YYYY-MM-DD format
+```
+
+**Invalid airport code:**
+```
+Error: Invalid airport code: XYZ
+```
+
+**Invalid time range:**
+```
+Error: Time range must be in format 'start-end' (e.g., 6-20)
+```
+
+**No flights found:**
+```
+No flights found.
+```
+
+## Tips
+
+<Tip>
+Use the shorthand syntax without the `flights` command for faster searches:
+```bash
+fli JFK LAX 2025-10-25
+```
+</Tip>
+
+<Tip>
+Combine `--time` and `--sort DEPARTURE_TIME` to find the earliest available flights in your preferred time window.
+</Tip>
+
+<Tip>
+For flexible travel, use the [dates command](/cli/dates-command) to find the cheapest dates before searching specific flights.
+</Tip>

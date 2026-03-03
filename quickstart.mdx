@@ -1,80 +1,428 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick start
+description: Get started with Fli in minutes - search flights using the CLI or Python API
 ---
 
-## Get started in three steps
+This guide will get you searching for flights in minutes using either the CLI or Python API.
 
-Get your documentation site running locally and make your first customization.
+<Note>
+Make sure you've [installed Fli](/installation) before continuing.
+</Note>
 
-### Step 1: Set up your local environment
+## CLI usage
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+The Fli CLI provides an intuitive command-line interface for flight searches.
 
-### Step 2: Deploy your changes
+### Basic flight search
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+Search for one-way flights between two airports on a specific date:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+```bash
+fli flights JFK LAX 2025-10-25
+```
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+This searches for flights from New York (JFK) to Los Angeles (LAX) on October 25, 2025.
 
-### Step 3: Go live
+### Advanced search with filters
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+Add filters to narrow your search:
+
+```bash
+fli flights JFK LHR 2025-10-25 \
+    --time 6-20 \              # Depart between 6 AM - 8 PM
+    --airlines BA KL \         # British Airways or KLM only
+    --class BUSINESS \         # Business class seats
+    --stops NON_STOP \         # Non-stop flights only
+    --sort DURATION            # Sort by flight duration
+```
+
+<Tip>
+Use `fli flights --help` to see all available options and filters.
+</Tip>
+
+### Find cheapest dates
+
+Search for the cheapest dates to fly within a date range:
+
+```bash
+# Basic date search (next 30 days by default)
+fli dates JFK LAX
+
+# Search specific date range
+fli dates JFK LHR \
+    --from 2025-01-01 \
+    --to 2025-02-01 \
+    --monday --friday          # Only Mondays and Fridays
+```
+
+### CLI options reference
+
+<Tabs>
+  <Tab title="Flights command">
+    | Option | Description | Example |
+    |--------|-------------|----------|
+    | `--time, -t` | Departure time window (24-hour format) | `6-20`, `8-12` |
+    | `--airlines, -a` | Filter by airline IATA codes | `BA KL AA` |
+    | `--class, -c` | Cabin class | `ECONOMY`, `BUSINESS`, `FIRST` |
+    | `--stops, -s` | Maximum stops | `NON_STOP`, `ONE_STOP`, `ANY` |
+    | `--sort, -o` | Sort results by | `CHEAPEST`, `DURATION`, `DEPARTURE_TIME` |
+
+    ```bash
+    # Example with multiple filters
+    fli flights SFO NRT 2025-12-01 \
+        --time 10-14 \
+        --class PREMIUM_ECONOMY \
+        --stops ONE_STOP \
+        --airlines NH JL \
+        --sort CHEAPEST
+    ```
+  </Tab>
+
+  <Tab title="Dates command">
+    | Option | Description | Example |
+    |--------|-------------|----------|
+    | `--from` | Start of date range | `2025-01-01` |
+    | `--to` | End of date range | `2025-02-01` |
+    | `--class, -c` | Cabin class | `ECONOMY`, `BUSINESS` |
+    | `--stops, -s` | Maximum stops | `NON_STOP`, `ONE_STOP` |
+    | `--[day]` | Filter by weekday | `--monday`, `--saturday` |
+
+    ```bash
+    # Example: Find cheapest weekends in January
+    fli dates LAX MIA \
+        --from 2025-01-01 \
+        --to 2025-01-31 \
+        --saturday --sunday \
+        --class ECONOMY
+    ```
+  </Tab>
+</Tabs>
+
+## Python API
+
+Use Fli programmatically in your Python applications.
+
+### Basic one-way search
+
+Here's a complete example searching for one-way flights:
+
+```python
+from datetime import datetime, timedelta
+from fli.models import (
+    Airport,
+    FlightSearchFilters,
+    FlightSegment,
+    PassengerInfo,
+    SeatType,
+    MaxStops,
+    SortBy,
+)
+from fli.search import SearchFlights
+
+# Create search filters
+filters = FlightSearchFilters(
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LAX, 0]],
+            travel_date=(datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+        )
+    ],
+    seat_type=SeatType.ECONOMY,
+    stops=MaxStops.NON_STOP,
+    sort_by=SortBy.CHEAPEST,
+)
+
+# Search flights
+search = SearchFlights()
+flights = search.search(filters)
+
+# Process results
+for flight in flights:
+    print(f"💰 Price: ${flight.price}")
+    print(f"⏱️ Duration: {flight.duration} minutes")
+    print(f"✈️ Stops: {flight.stops}")
+
+    for leg in flight.legs:
+        print(f"\n🛫 Flight: {leg.airline.value} {leg.flight_number}")
+        print(f"📍 From: {leg.departure_airport.value} at {leg.departure_datetime}")
+        print(f"📍 To: {leg.arrival_airport.value} at {leg.arrival_datetime}")
+```
+
+### Round-trip search
+
+Search for round-trip flights with outbound and return segments:
+
+```python
+from datetime import datetime, timedelta
+from fli.models import (
+    Airport,
+    FlightSearchFilters,
+    FlightSegment,
+    PassengerInfo,
+    TripType,
+)
+from fli.search import SearchFlights
+
+# Calculate dates
+outbound_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+return_date = (datetime.now() + timedelta(days=37)).strftime("%Y-%m-%d")
+
+# Create flight segments for round trip
+filters = FlightSearchFilters(
+    trip_type=TripType.ROUND_TRIP,
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LAX, 0]],
+            travel_date=outbound_date,
+        ),
+        FlightSegment(
+            departure_airport=[[Airport.LAX, 0]],
+            arrival_airport=[[Airport.JFK, 0]],
+            travel_date=return_date,
+        ),
+    ],
+)
+
+# Search flights
+search = SearchFlights()
+results = search.search(filters)
+
+# Process round-trip results
+for outbound, return_flight in results:
+    print("\nOutbound Flight:")
+    for leg in outbound.legs:
+        print(f"Flight: {leg.airline.value} {leg.flight_number}")
+        print(f"Departure: {leg.departure_datetime}")
+
+    print("\nReturn Flight:")
+    for leg in return_flight.legs:
+        print(f"Flight: {leg.airline.value} {leg.flight_number}")
+        print(f"Departure: {leg.departure_datetime}")
+
+    print(f"\nTotal Price: ${outbound.price + return_flight.price}")
+```
+
+### Date range search
+
+Find the cheapest dates to travel within a date range:
+
+```python
+from datetime import datetime, timedelta
+from fli.models import Airport, DateSearchFilters, FlightSegment, PassengerInfo
+from fli.search import SearchDates
+
+# Calculate date range
+base_date = datetime.now() + timedelta(days=30)
+travel_date = base_date.strftime("%Y-%m-%d")
+from_date = base_date.strftime("%Y-%m-%d")
+to_date = (base_date + timedelta(days=30)).strftime("%Y-%m-%d")
+
+# Create filters
+filters = DateSearchFilters(
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LAX, 0]],
+            travel_date=travel_date,
+        )
+    ],
+    from_date=from_date,
+    to_date=to_date,
+)
+
+# Search dates
+search = SearchDates()
+results = search.search(filters)
+
+# Process results
+for date_price in results:
+    print(f"Date: {date_price.date}, Price: ${date_price.price}")
+```
+
+### Advanced search with filters
+
+Use advanced filters for complex searches:
+
+```python
+from datetime import datetime, timedelta
+from fli.models import (
+    Airline,
+    Airport,
+    FlightSearchFilters,
+    FlightSegment,
+    LayoverRestrictions,
+    MaxStops,
+    PassengerInfo,
+    SeatType,
+    TripType,
+)
+from fli.search import SearchFlights
+
+# Create detailed filters
+filters = FlightSearchFilters(
+    trip_type=TripType.ONE_WAY,
+    passenger_info=PassengerInfo(adults=2, children=1, infants_on_lap=1),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LHR, 0]],
+            travel_date=(datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+        )
+    ],
+    seat_type=SeatType.BUSINESS,
+    stops=MaxStops.ONE_STOP_OR_FEWER,
+    airlines=[Airline.BA, Airline.VS],  # British Airways and Virgin Atlantic
+    max_duration=720,  # 12 hours in minutes
+    layover_restrictions=LayoverRestrictions(
+        airports=[Airport.BOS, Airport.ORD],  # Prefer these layover airports
+        max_duration=180,  # Maximum 3-hour layover
+    ),
+)
+
+search = SearchFlights()
+results = search.search(filters)
+
+print(f"Found {len(results)} flights:")
+for i, flight in enumerate(results, 1):
+    print(f"\n--- Flight {i} ---")
+    print(f"Price: ${flight.price}")
+    print(f"Duration: {flight.duration} minutes")
+    print(f"Stops: {flight.stops}")
+```
+
+## Understanding the data models
+
+<Tabs>
+  <Tab title="Airport">
+    Airport codes use the standard IATA 3-letter codes:
+
+    ```python
+    from fli.models import Airport
+
+    # Common airports
+    Airport.JFK  # New York - John F. Kennedy
+    Airport.LAX  # Los Angeles International
+    Airport.LHR  # London Heathrow
+    Airport.NRT  # Tokyo Narita
+
+    # Get the code as string
+    print(Airport.JFK.value)  # "JFK"
+    ```
+  </Tab>
+
+  <Tab title="Airline">
+    Airline codes also use IATA 2-letter codes:
+
+    ```python
+    from fli.models import Airline
+
+    # Major airlines
+    Airline.AA   # American Airlines
+    Airline.BA   # British Airways
+    Airline.DL   # Delta Air Lines
+    Airline.UA   # United Airlines
+
+    # Get the code as string
+    print(Airline.BA.value)  # "BA"
+    ```
+  </Tab>
+
+  <Tab title="Seat types">
+    Available cabin classes:
+
+    ```python
+    from fli.models import SeatType
+
+    SeatType.ECONOMY
+    SeatType.PREMIUM_ECONOMY
+    SeatType.BUSINESS
+    SeatType.FIRST
+    ```
+  </Tab>
+
+  <Tab title="Stops">
+    Filter by number of stops:
+
+    ```python
+    from fli.models import MaxStops
+
+    MaxStops.NON_STOP           # Direct flights only
+    MaxStops.ONE_STOP_OR_FEWER  # Non-stop or 1 stop
+    MaxStops.TWO_STOPS_OR_FEWER # Up to 2 stops
+    MaxStops.ANY                # Any number of stops
+    ```
+  </Tab>
+
+  <Tab title="Sort options">
+    Sort search results by:
+
+    ```python
+    from fli.models import SortBy
+
+    SortBy.CHEAPEST        # Lowest price first
+    SortBy.DURATION        # Shortest duration first
+    SortBy.DEPARTURE_TIME  # Earliest departure first
+    SortBy.ARRIVAL_TIME    # Earliest arrival first
+    ```
+  </Tab>
+</Tabs>
+
+## Running examples
+
+Fli includes 11 comprehensive examples in the source repository:
+
+```bash
+# Clone the repository
+git clone https://github.com/punitarani/fli.git
+cd fli
+
+# Run examples with uv (recommended)
+uv run python examples/basic_one_way_search.py
+uv run python examples/round_trip_search.py
+uv run python examples/date_range_search.py
+uv run python examples/complex_flight_search.py
+
+# Or install dependencies and run directly
+pip install pydantic curl_cffi httpx
+python examples/basic_one_way_search.py
+```
+
+**Available examples:**
+
+- `basic_one_way_search.py` - Simple one-way flight search
+- `round_trip_search.py` - Round-trip flight booking
+- `date_range_search.py` - Find cheapest dates
+- `complex_flight_search.py` - Advanced filtering and multi-passenger
+- `time_restrictions_search.py` - Time-based filtering
+- `date_search_with_preferences.py` - Weekend filtering
+- `price_tracking.py` - Price monitoring over time
+- `error_handling_with_retries.py` - Robust error handling
+- `result_processing.py` - Data analysis with pandas
+- `complex_round_trip_validation.py` - Advanced round-trip with validation
+- `advanced_date_search_validation.py` - Complex date search with filtering
+
+<Tip>
+All examples include automatic dependency checking and will show helpful installation instructions if dependencies are missing.
+</Tip>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="MCP Server" icon="robot" href="/mcp/overview">
+    Set up the MCP server for Claude Desktop integration
+  </Card>
+  <Card title="API Reference" icon="book" href="/api/search-flights">
+    Explore the complete API documentation
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/cli/overview">
+    Learn about all CLI commands and options
+  </Card>
+  <Card title="Examples" icon="code" href="/library/examples">
+    Browse more code examples and use cases
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

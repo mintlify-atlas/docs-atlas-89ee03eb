@@ -1,0 +1,241 @@
+---
+title: Parsers
+description: Parser functions for converting user input into domain model objects
+---
+
+The `parsers` module provides utilities for parsing and validating user input into strongly-typed domain model objects. These functions are used by both the CLI and MCP interfaces to ensure consistent parameter handling.
+
+## resolve_enum
+
+Resolve an enum member by name with normalized errors.
+
+```python
+def resolve_enum(enum_cls: type[T], name: str) -> T
+```
+
+<ParamField path="enum_cls" type="type[T]" required>
+  The enum class to resolve from
+</ParamField>
+
+<ParamField path="name" type="str" required>
+  The name of the enum member (case-insensitive)
+</ParamField>
+
+**Returns:** The resolved enum member
+
+**Raises:** `ParseError` if the name is not a valid enum member
+
+### Usage
+
+```python
+from fli.core.parsers import resolve_enum
+from fli.models import SeatType
+
+seat_type = resolve_enum(SeatType, "economy")  # Returns SeatType.ECONOMY
+```
+
+## resolve_airport
+
+Resolve an airport code to an Airport enum.
+
+```python
+def resolve_airport(code: str) -> Airport
+```
+
+<ParamField path="code" type="str" required>
+  IATA airport code (e.g., 'JFK', 'LHR')
+</ParamField>
+
+**Returns:** The corresponding `Airport` enum member
+
+**Raises:** `ParseError` if the code is not a valid airport
+
+### Usage
+
+```python
+from fli.core.parsers import resolve_airport
+
+origin = resolve_airport("JFK")  # Returns Airport.JFK
+destination = resolve_airport("LHR")  # Returns Airport.LHR
+```
+
+## parse_airlines
+
+Parse a list of airline codes into Airline enums.
+
+```python
+def parse_airlines(codes: list[str] | None) -> list[Airline] | None
+```
+
+<ParamField path="codes" type="list[str] | None" required>
+  List of IATA airline codes (e.g., ['BA', 'KL']). Can be None.
+</ParamField>
+
+**Returns:** List of `Airline` enums, or `None` if input is empty
+
+**Raises:** `ParseError` if any code is not a valid airline
+
+### Usage
+
+```python
+from fli.core.parsers import parse_airlines
+
+airlines = parse_airlines(["DL", "UA"])  # Returns [Airline.DL, Airline.UA]
+no_filter = parse_airlines(None)  # Returns None
+```
+
+## parse_max_stops
+
+Parse a stops parameter into a MaxStops enum.
+
+Accepts both string names (ANY, NON_STOP, ONE_STOP, TWO_PLUS_STOPS) and integer values (0, 1, 2+).
+
+```python
+def parse_max_stops(stops: str) -> MaxStops
+```
+
+<ParamField path="stops" type="str" required>
+  Stops value as string or integer representation. Valid values:
+  - String names: `"ANY"`, `"NON_STOP"`, `"NONSTOP"`, `"ONE_STOP"`, `"ONE_STOP_OR_FEWER"`, `"TWO_PLUS_STOPS"`, `"TWO_OR_FEWER_STOPS"`
+  - Integers: `"0"` (non-stop), `"1"` (one stop or fewer), `"2"` (two or fewer stops)
+</ParamField>
+
+**Returns:** The corresponding `MaxStops` enum member
+
+**Raises:** `ParseError` if the value is not valid
+
+### Usage
+
+```python
+from fli.core.parsers import parse_max_stops
+
+# Using string names
+max_stops = parse_max_stops("NON_STOP")  # Returns MaxStops.NON_STOP
+max_stops = parse_max_stops("ONE_STOP")  # Returns MaxStops.ONE_STOP_OR_FEWER
+
+# Using integer values
+max_stops = parse_max_stops("0")  # Returns MaxStops.NON_STOP
+max_stops = parse_max_stops("1")  # Returns MaxStops.ONE_STOP_OR_FEWER
+max_stops = parse_max_stops("2")  # Returns MaxStops.TWO_OR_FEWER_STOPS
+```
+
+## parse_cabin_class
+
+Parse a cabin class string into a SeatType enum.
+
+```python
+def parse_cabin_class(cabin_class: str) -> SeatType
+```
+
+<ParamField path="cabin_class" type="str" required>
+  Cabin class name. Valid values: `"ECONOMY"`, `"PREMIUM_ECONOMY"`, `"BUSINESS"`, `"FIRST"`
+</ParamField>
+
+**Returns:** The corresponding `SeatType` enum member
+
+**Raises:** `ParseError` if the value is not valid
+
+### Usage
+
+```python
+from fli.core.parsers import parse_cabin_class
+
+cabin_class = parse_cabin_class("ECONOMY")  # Returns SeatType.ECONOMY
+cabin_class = parse_cabin_class("BUSINESS")  # Returns SeatType.BUSINESS
+```
+
+## parse_sort_by
+
+Parse a sort_by string into a SortBy enum.
+
+```python
+def parse_sort_by(sort_by: str) -> SortBy
+```
+
+<ParamField path="sort_by" type="str" required>
+  Sort option. Valid values: `"CHEAPEST"`, `"DURATION"`, `"DEPARTURE_TIME"`, `"ARRIVAL_TIME"`
+</ParamField>
+
+**Returns:** The corresponding `SortBy` enum member
+
+**Raises:** `ParseError` if the value is not valid
+
+### Usage
+
+```python
+from fli.core.parsers import parse_sort_by
+
+sort_option = parse_sort_by("CHEAPEST")  # Returns SortBy.CHEAPEST
+sort_option = parse_sort_by("DURATION")  # Returns SortBy.DURATION
+```
+
+## parse_time_range
+
+Parse a time range string into start and end hours.
+
+```python
+def parse_time_range(time_range: str) -> tuple[int, int]
+```
+
+<ParamField path="time_range" type="str" required>
+  Time range in 'HH-HH' format (e.g., '6-20' for 6 AM to 8 PM)
+</ParamField>
+
+**Returns:** Tuple of `(start_hour, end_hour)` where hours are integers from 0-23
+
+**Raises:** `ParseError` if the format is invalid or hours are out of range
+
+### Usage
+
+```python
+from fli.core.parsers import parse_time_range
+
+start, end = parse_time_range("6-20")  # Returns (6, 20)
+start, end = parse_time_range("8-22")  # Returns (8, 22)
+```
+
+## ParseError
+
+Exception raised when parsing fails.
+
+```python
+class ParseError(ValueError):
+    """Error raised when parsing fails."""
+```
+
+All parser functions raise `ParseError` when they encounter invalid input. This exception inherits from `ValueError` and includes descriptive error messages with valid value suggestions.
+
+### Usage
+
+```python
+from fli.core.parsers import parse_cabin_class, ParseError
+
+try:
+    cabin_class = parse_cabin_class("INVALID")
+except ParseError as e:
+    print(e)  # "Invalid cabin_class value: 'INVALID'. Valid values: ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST"
+```
+
+## Complete example
+
+Here's how the parser functions are used together in the MCP server:
+
+```python
+from fli.core.parsers import (
+    resolve_airport,
+    parse_airlines,
+    parse_cabin_class,
+    parse_max_stops,
+    parse_sort_by,
+)
+
+# Parse all search parameters
+origin = resolve_airport("JFK")
+destination = resolve_airport("LHR")
+cabin_class = parse_cabin_class("ECONOMY")
+max_stops = parse_max_stops("NON_STOP")
+sort_by = parse_sort_by("CHEAPEST")
+airlines = parse_airlines(["BA", "DL"])
+
+# These are now ready to use in FlightSearchFilters
+```

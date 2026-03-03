@@ -1,0 +1,127 @@
+---
+title: Introduction
+description: A powerful Python library for accessing Google Flights data with MCP server and CLI interface
+---
+
+Welcome to Fli, a modern Python library that provides programmatic access to Google Flights data through direct API interaction. Search flights, find the best deals, and integrate flight search into your applications and AI assistants.
+
+## What makes Fli special?
+
+Unlike other flight search libraries that rely on web scraping, Fli directly interacts with Google Flights' API through reverse engineering. This approach provides:
+
+<CardGroup cols={2}>
+  <Card title="Fast" icon="bolt">
+    Direct API access means faster, more reliable results without browser overhead
+  </Card>
+  <Card title="Zero scraping" icon="code">
+    No HTML parsing, no browser automation, just pure API interaction
+  </Card>
+  <Card title="Reliable" icon="shield-check">
+    Less prone to breaking from UI changes since we use the API directly
+  </Card>
+  <Card title="Modular" icon="puzzle-piece">
+    Extensible architecture for easy customization and integration
+  </Card>
+</CardGroup>
+
+## Three ways to use Fli
+
+<CardGroup cols={3}>
+  <Card title="CLI" icon="terminal" href="/quickstart#cli-usage">
+    Command-line interface for quick flight searches
+  </Card>
+  <Card title="Python API" icon="python" href="/quickstart#python-api">
+    Programmatic access for building applications
+  </Card>
+  <Card title="MCP Server" icon="robot" href="/mcp/overview">
+    AI assistant integration via Model Context Protocol
+  </Card>
+</CardGroup>
+
+## Core features
+
+### Powerful search capabilities
+
+- **One-way and round-trip searches** - Search for single or return journeys
+- **Flexible date searches** - Find the cheapest dates within a range
+- **Multi-airline support** - Filter by specific airlines or search across all carriers
+- **Cabin class selection** - Economy, Premium Economy, Business, or First class
+- **Stop preferences** - Non-stop, one stop, or any number of stops
+- **Custom sorting** - Sort by price, duration, departure time, or arrival time
+- **Time restrictions** - Filter by departure and arrival time windows
+
+### Built-in protection
+
+<Note>
+Fli includes automatic rate limiting (10 requests/second), retry logic with exponential backoff, and comprehensive error handling to ensure reliable operation.
+</Note>
+
+- **Rate limiting** - Automatic throttling to prevent API blocks
+- **Automatic retries** - Exponential backoff for transient failures
+- **Error handling** - Comprehensive validation and error messages
+- **Input validation** - Type-safe Pydantic models throughout
+
+## Use cases
+
+<CardGroup cols={2}>
+  <Card title="Price tracking" icon="chart-line">
+    Monitor flight prices over time and get alerts for deals
+  </Card>
+  <Card title="Travel planning" icon="calendar">
+    Find the cheapest dates for your next vacation
+  </Card>
+  <Card title="AI assistants" icon="comments">
+    Let Claude or other AI assistants search flights naturally
+  </Card>
+  <Card title="Travel apps" icon="mobile">
+    Build custom travel applications with flight search
+  </Card>
+</CardGroup>
+
+## Quick example
+
+<CodeGroup>
+```bash CLI
+# Search for flights from New York to Los Angeles
+fli flights JFK LAX 2025-10-25
+
+# Find cheapest dates in January
+fli dates JFK LAX --from 2025-01-01 --to 2025-01-31
+```
+
+```python Python
+from datetime import datetime, timedelta
+from fli.models import Airport, FlightSearchFilters, FlightSegment, PassengerInfo
+from fli.search import SearchFlights
+
+# Search flights
+filters = FlightSearchFilters(
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[FlightSegment(
+        departure_airport=[[Airport.JFK, 0]],
+        arrival_airport=[[Airport.LAX, 0]],
+        travel_date=(datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+    )]
+)
+
+search = SearchFlights()
+flights = search.search(filters)
+```
+</CodeGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install Fli using pip, pipx, or uv
+  </Card>
+  <Card title="Quick start" icon="rocket" href="/quickstart">
+    Get started with your first flight search
+  </Card>
+  <Card title="MCP Server" icon="server" href="/mcp/overview">
+    Set up the MCP server for Claude Desktop
+  </Card>
+  <Card title="API Reference" icon="book" href="/api/search-flights">
+    Explore the complete API documentation
+  </Card>
+</CardGroup>

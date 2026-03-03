@@ -1,0 +1,297 @@
+---
+title: Python library overview
+description: Learn how to use Fli's Python API for programmatic flight searches
+---
+
+The Fli Python library provides a clean, typed interface for searching Google Flights data programmatically. It uses direct API integration (not web scraping) with built-in rate limiting and retry logic.
+
+## Installation
+
+```bash
+pip install fli
+```
+
+## Quick start
+
+Here's a basic one-way flight search:
+
+```python
+from datetime import datetime, timedelta
+from fli.models import (
+    Airport,
+    FlightSearchFilters,
+    FlightSegment,
+    PassengerInfo,
+    SeatType,
+    MaxStops,
+)
+from fli.search import SearchFlights
+
+# Create search filters
+filters = FlightSearchFilters(
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LAX, 0]],
+            travel_date=(datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+        )
+    ],
+    seat_type=SeatType.ECONOMY,
+    stops=MaxStops.NON_STOP,
+)
+
+# Search flights
+search = SearchFlights()
+flights = search.search(filters)
+
+# Process results
+for flight in flights:
+    print(f"Price: ${flight.price}")
+    print(f"Duration: {flight.duration} minutes")
+    for leg in flight.legs:
+        print(f"Flight: {leg.airline.value} {leg.flight_number}")
+        print(f"From: {leg.departure_airport.value} at {leg.departure_datetime}")
+        print(f"To: {leg.arrival_airport.value} at {leg.arrival_datetime}")
+```
+
+## Core classes
+
+### SearchFlights
+
+The `SearchFlights` class handles specific flight searches with detailed filters. Use it when you know your travel dates and want to find available flights.
+
+**Key features:**
+- Search one-way or round-trip flights
+- Filter by cabin class, stops, airlines, and more
+- Set time restrictions for departures and arrivals
+- Automatic rate limiting (10 requests/second)
+- Built-in retry logic with exponential backoff
+
+**Returns:**
+- For one-way: List of `FlightResult` objects
+- For round-trip: List of tuples `(outbound_flight, return_flight)`
+
+[Learn more about SearchFlights →](/library/search-flights)
+
+### SearchDates
+
+The `SearchDates` class finds the cheapest dates to fly within a date range. Use it for flexible travel planning when you want to find the best prices.
+
+**Key features:**
+- Search across date ranges (up to 305 days in future)
+- Automatic chunking for ranges over 61 days
+- Filter by cabin class, stops, airlines, and more
+- Returns price data for each date in range
+
+**Returns:**
+- List of `DatePrice` objects containing date and price pairs
+
+[Learn more about SearchDates →](/library/search-dates)
+
+## Data models
+
+Fli uses Pydantic models for type safety and validation:
+
+### FlightSearchFilters
+
+Complete search configuration for `SearchFlights`:
+
+```python
+FlightSearchFilters(
+    trip_type=TripType.ONE_WAY,           # or ROUND_TRIP
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[...],                 # List of FlightSegment
+    seat_type=SeatType.ECONOMY,           # Cabin class
+    stops=MaxStops.NON_STOP,              # Stop preferences
+    airlines=[Airline.AA, Airline.DL],    # Optional airline filter
+    max_duration=720,                      # Max flight time in minutes
+    sort_by=SortBy.CHEAPEST,              # Sort preference
+)
+```
+
+### DateSearchFilters
+
+Complete search configuration for `SearchDates`:
+
+```python
+DateSearchFilters(
+    trip_type=TripType.ONE_WAY,
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[...],
+    from_date="2024-06-01",               # Start of date range
+    to_date="2024-06-30",                 # End of date range
+    duration=7,                            # Round trip duration (days)
+    seat_type=SeatType.ECONOMY,
+    stops=MaxStops.ANY,
+)
+```
+
+### FlightSegment
+
+Defines a single leg of the journey:
+
+```python
+FlightSegment(
+    departure_airport=[[Airport.JFK, 0]],
+    arrival_airport=[[Airport.LAX, 0]],
+    travel_date="2024-06-15",
+    time_restrictions=TimeRestrictions(
+        earliest_departure=6,              # 6 AM
+        latest_departure=12,               # 12 PM
+    ),
+)
+```
+
+### FlightResult
+
+Contains complete flight information:
+
+```python
+class FlightResult:
+    price: float                           # Total price
+    duration: int                          # Total duration (minutes)
+    stops: int                             # Number of stops
+    legs: list[FlightLeg]                  # Individual flight legs
+```
+
+### FlightLeg
+
+Details for a single flight:
+
+```python
+class FlightLeg:
+    airline: Airline                       # Airline enum
+    flight_number: str                     # Flight number
+    departure_airport: Airport             # Origin airport
+    arrival_airport: Airport               # Destination airport
+    departure_datetime: datetime           # Departure time
+    arrival_datetime: datetime             # Arrival time
+    duration: int                          # Leg duration (minutes)
+```
+
+### DatePrice
+
+Price information for specific dates:
+
+```python
+class DatePrice:
+    date: tuple[datetime] | tuple[datetime, datetime]  # One-way or round-trip dates
+    price: float                           # Flight price
+```
+
+## Enums and filters
+
+### Airport
+
+IATA airport codes as enums:
+
+```python
+from fli.models import Airport
+
+# Major US airports
+Airport.JFK  # New York JFK
+Airport.LAX  # Los Angeles
+Airport.ORD  # Chicago O'Hare
+Airport.SFO  # San Francisco
+
+# International airports
+Airport.LHR  # London Heathrow
+Airport.CDG  # Paris Charles de Gaulle
+Airport.NRT  # Tokyo Narita
+```
+
+### Airline
+
+IATA airline codes as enums:
+
+```python
+from fli.models import Airline
+
+Airline.AA   # American Airlines
+Airline.DL   # Delta
+Airline.UA   # United
+Airline.BA   # British Airways
+```
+
+### SeatType
+
+Cabin class options:
+
+```python
+from fli.models import SeatType
+
+SeatType.ECONOMY
+SeatType.PREMIUM_ECONOMY
+SeatType.BUSINESS
+SeatType.FIRST
+```
+
+### MaxStops
+
+Stop preferences:
+
+```python
+from fli.models import MaxStops
+
+MaxStops.NON_STOP
+MaxStops.ONE_STOP_OR_FEWER
+MaxStops.TWO_PLUS_STOPS
+MaxStops.ANY
+```
+
+### SortBy
+
+Result sorting options:
+
+```python
+from fli.models import SortBy
+
+SortBy.CHEAPEST
+SortBy.DURATION
+SortBy.DEPARTURE_TIME
+SortBy.ARRIVAL_TIME
+```
+
+## Rate limiting and retries
+
+The library includes automatic rate limiting and retry logic:
+
+- **Rate limit:** 10 requests per second
+- **Retries:** Up to 3 attempts with exponential backoff
+- **Session management:** Persistent HTTP sessions for efficiency
+- **Browser impersonation:** Uses curl-cffi to mimic browser behavior
+
+You don't need to implement your own retry logic - it's built into the HTTP client at `fli/search/client.py:38-39,62-63`.
+
+## Error handling
+
+Both `SearchFlights` and `SearchDates` raise exceptions on failures:
+
+```python
+try:
+    results = search.search(filters)
+    if not results:
+        print("No flights found")
+except Exception as e:
+    print(f"Search failed: {e}")
+```
+
+The library automatically handles:
+- Network errors (with retries)
+- Rate limit errors (with backoff)
+- Invalid API responses
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="SearchFlights" icon="plane-departure" href="/library/search-flights">
+    Search for specific flights with detailed filters
+  </Card>
+  <Card title="SearchDates" icon="calendar" href="/library/search-dates">
+    Find the cheapest dates to fly
+  </Card>
+  <Card title="Examples" icon="code" href="/library/examples">
+    Explore 11 complete code examples
+  </Card>
+</CardGroup>

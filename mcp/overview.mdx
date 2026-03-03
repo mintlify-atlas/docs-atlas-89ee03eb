@@ -1,0 +1,68 @@
+---
+title: MCP server overview
+description: Enable AI assistants to search flights using Fli's Model Context Protocol server
+---
+
+## What is MCP?
+
+The Model Context Protocol (MCP) is an open standard that enables AI assistants to interact with external tools and data sources. MCP servers expose capabilities through a standardized interface that AI assistants can discover and use.
+
+## Fli's MCP server
+
+Fli provides an MCP server that gives AI assistants direct access to Google Flights data. This enables natural language flight searches through tools like Claude Desktop, where you can ask questions like "Find me the cheapest flights from JFK to London next week" and get real-time results.
+
+### Key features
+
+- **Two search tools**: Search for specific flights or find the cheapest dates within a flexible range
+- **Comprehensive filtering**: Filter by cabin class, stops, airlines, departure time, and more
+- **Real-time data**: Direct integration with Google Flights API for current prices and availability
+- **Configuration options**: Customize defaults like currency, passenger count, and sorting preferences
+- **Rate limiting**: Built-in 10 requests/second limit with automatic retry logic
+
+### Architecture
+
+The MCP server is built on [FastMCP](https://github.com/jlowin/fastmcp) and provides:
+
+- **Tools**: `search_flights` and `search_dates` for different search scenarios
+- **Resources**: Configuration schema and current settings
+- **Prompts**: Pre-built templates for common search patterns
+
+The server runs over STDIO by default, making it compatible with Claude Desktop and other MCP clients that support the standard transport protocol.
+
+## Use cases
+
+### Flight planning with AI assistance
+
+Connect Fli to Claude Desktop to search flights conversationally:
+
+- "Find direct flights from San Francisco to Tokyo next month"
+- "What's the cheapest week to fly to Paris in May?"
+- "Show me business class options from NYC to London on March 15th"
+
+### Flexible date searches
+
+Use the date search tool to find the best deals within a flexible travel window:
+
+- Compare prices across different departure dates
+- Find the cheapest round-trip dates for a specific trip duration
+- Identify low-season travel periods
+
+### Complex filtering
+
+Combine multiple filters for specific requirements:
+
+- Non-stop flights only
+- Specific airlines or alliances
+- Preferred departure time windows
+- Cabin class preferences
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Setup guide" icon="gear" href="/mcp/setup">
+    Install and configure the MCP server with Claude Desktop
+  </Card>
+  <Card title="Available tools" icon="tools" href="/mcp/tools">
+    Learn about search_flights and search_dates tools
+  </Card>
+</CardGroup>

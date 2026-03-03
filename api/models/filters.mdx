@@ -1,0 +1,224 @@
+---
+title: Filter models
+description: Models for configuring flight search filters and constraints
+---
+
+## FlightSearchFilters
+
+Complete set of filters for flight search on specific dates.
+
+<ParamField path="trip_type" type="TripType" default="TripType.ONE_WAY">
+  Type of flight journey (round trip or one-way)
+</ParamField>
+
+<ParamField path="passenger_info" type="PassengerInfo" required>
+  Passenger configuration for the search
+</ParamField>
+
+<ParamField path="flight_segments" type="list[FlightSegment]" required>
+  List of flight segments (typically 1 for one-way, 2 for round trip)
+</ParamField>
+
+<ParamField path="stops" type="MaxStops" default="MaxStops.ANY">
+  Maximum number of stops allowed in the flight
+</ParamField>
+
+<ParamField path="seat_type" type="SeatType" default="SeatType.ECONOMY">
+  Cabin class preference
+</ParamField>
+
+<ParamField path="price_limit" type="PriceLimit | None" default="None">
+  Maximum price constraint for the search
+</ParamField>
+
+<ParamField path="airlines" type="list[Airline] | None" default="None">
+  Filter by specific airlines
+</ParamField>
+
+<ParamField path="max_duration" type="int | None" default="None">
+  Maximum flight duration in minutes
+</ParamField>
+
+<ParamField path="layover_restrictions" type="LayoverRestrictions | None" default="None">
+  Constraints for layovers in multi-leg flights
+</ParamField>
+
+<ParamField path="sort_by" type="SortBy" default="SortBy.NONE">
+  Sorting option for flight results
+</ParamField>
+
+### Methods
+
+<ResponseField name="format()" type="list">
+  Formats filters into Google Flights API structure
+</ResponseField>
+
+<ResponseField name="encode()" type="str">
+  URL encodes the formatted filters for API request
+</ResponseField>
+
+## DateSearchFilters
+
+Filters for searching flights across a date range to find cheapest travel dates.
+
+<ParamField path="trip_type" type="TripType" default="TripType.ONE_WAY">
+  Type of flight journey (round trip or one-way)
+</ParamField>
+
+<ParamField path="passenger_info" type="PassengerInfo" required>
+  Passenger configuration for the search
+</ParamField>
+
+<ParamField path="flight_segments" type="list[FlightSegment]" required>
+  List of flight segments for the search
+</ParamField>
+
+<ParamField path="stops" type="MaxStops" default="MaxStops.ANY">
+  Maximum number of stops allowed in the flight
+</ParamField>
+
+<ParamField path="seat_type" type="SeatType" default="SeatType.ECONOMY">
+  Cabin class preference
+</ParamField>
+
+<ParamField path="price_limit" type="PriceLimit | None" default="None">
+  Maximum price constraint for the search
+</ParamField>
+
+<ParamField path="airlines" type="list[Airline] | None" default="None">
+  Filter by specific airlines
+</ParamField>
+
+<ParamField path="max_duration" type="int | None" default="None">
+  Maximum flight duration in minutes
+</ParamField>
+
+<ParamField path="layover_restrictions" type="LayoverRestrictions | None" default="None">
+  Constraints for layovers in multi-leg flights
+</ParamField>
+
+<ParamField path="from_date" type="str" required>
+  Start date for the search range in YYYY-MM-DD format
+</ParamField>
+
+<ParamField path="to_date" type="str" required>
+  End date for the search range in YYYY-MM-DD format
+</ParamField>
+
+<ParamField path="duration" type="int | None" default="None">
+  Trip duration in days (required for round trips)
+</ParamField>
+
+### Properties
+
+<ResponseField name="parsed_from_date" type="datetime">
+  Parses the from_date string into a datetime object
+</ResponseField>
+
+<ResponseField name="parsed_to_date" type="datetime">
+  Parses the to_date string into a datetime object
+</ResponseField>
+
+### Methods
+
+<ResponseField name="format()" type="list">
+  Formats filters into Google Flights API structure
+</ResponseField>
+
+<ResponseField name="encode()" type="str">
+  URL encodes the formatted filters for API request
+</ResponseField>
+
+## FlightSegment
+
+A segment represents a single portion of a flight journey between two airports.
+
+<ParamField path="departure_airport" type="list[list[Airport | int]]" required>
+  Nested list structure for departure airports (matches Google Flights API format)
+</ParamField>
+
+<ParamField path="arrival_airport" type="list[list[Airport | int]]" required>
+  Nested list structure for arrival airports (matches Google Flights API format)
+</ParamField>
+
+<ParamField path="travel_date" type="str" required>
+  Travel date in YYYY-MM-DD format (must not be in the past)
+</ParamField>
+
+<ParamField path="time_restrictions" type="TimeRestrictions | None" default="None">
+  Time constraints for departure and arrival
+</ParamField>
+
+<ParamField path="selected_flight" type="FlightResult | None" default="None">
+  Previously selected flight for fetching return flights
+</ParamField>
+
+### Properties
+
+<ResponseField name="parsed_travel_date" type="datetime">
+  Parses the travel_date string into a datetime object
+</ResponseField>
+
+## PassengerInfo
+
+Passenger configuration for flight search.
+
+<ParamField path="adults" type="int" default="1">
+  Number of adult passengers (non-negative)
+</ParamField>
+
+<ParamField path="children" type="int" default="0">
+  Number of child passengers (non-negative)
+</ParamField>
+
+<ParamField path="infants_in_seat" type="int" default="0">
+  Number of infants occupying a seat (non-negative)
+</ParamField>
+
+<ParamField path="infants_on_lap" type="int" default="0">
+  Number of infants sitting on an adult's lap (non-negative)
+</ParamField>
+
+## TimeRestrictions
+
+Time constraints for flight departure and arrival in local time. All times are in hours from midnight (e.g., 20 = 8:00 PM).
+
+<ParamField path="earliest_departure" type="int | None" default="None">
+  Earliest departure time in hours (0-23)
+</ParamField>
+
+<ParamField path="latest_departure" type="int | None" default="None">
+  Latest departure time in hours (1-24)
+</ParamField>
+
+<ParamField path="earliest_arrival" type="int | None" default="None">
+  Earliest arrival time in hours (0-23)
+</ParamField>
+
+<ParamField path="latest_arrival" type="int | None" default="None">
+  Latest arrival time in hours (1-24)
+</ParamField>
+
+## PriceLimit
+
+Maximum price constraint for flight search.
+
+<ParamField path="max_price" type="int" required>
+  Maximum price (positive integer)
+</ParamField>
+
+<ParamField path="currency" type="Currency | None" default="Currency.USD">
+  Currency for the price limit (currently only USD is supported)
+</ParamField>
+
+## LayoverRestrictions
+
+Constraints for layovers in multi-leg flights.
+
+<ParamField path="airports" type="list[Airport] | None" default="None">
+  Specific airports to allow for layovers
+</ParamField>
+
+<ParamField path="max_duration" type="int | None" default="None">
+  Maximum layover duration in minutes (positive integer)
+</ParamField>

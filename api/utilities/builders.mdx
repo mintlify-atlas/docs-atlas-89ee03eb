@@ -1,0 +1,248 @@
+---
+title: Builders
+description: Builder functions for constructing flight search filter objects
+---
+
+The `builders` module provides utilities for constructing flight search filter objects from parsed parameters. These functions are used by both the CLI and MCP interfaces to build consistent search requests.
+
+## build_time_restrictions
+
+Build a TimeRestrictions object from time window strings.
+
+```python
+def build_time_restrictions(
+    departure_window: str | None = None,
+    arrival_window: str | None = None,
+) -> TimeRestrictions | None
+```
+
+<ParamField path="departure_window" type="str | None">
+  Departure time range in 'HH-HH' format (e.g., '6-20' for 6 AM to 8 PM). Optional.
+</ParamField>
+
+<ParamField path="arrival_window" type="str | None">
+  Arrival time range in 'HH-HH' format (e.g., '8-22' for 8 AM to 10 PM). Optional.
+</ParamField>
+
+**Returns:** `TimeRestrictions` object with parsed time constraints, or `None` if no restrictions specified
+
+### Usage
+
+```python
+from fli.core.builders import build_time_restrictions
+
+# Build departure time restrictions
+time_restrictions = build_time_restrictions(
+    departure_window="6-20"
+)
+# Returns: TimeRestrictions(earliest_departure=6, latest_departure=20, earliest_arrival=None, latest_arrival=None)
+
+# Build both departure and arrival restrictions
+time_restrictions = build_time_restrictions(
+    departure_window="6-20",
+    arrival_window="8-22"
+)
+# Returns: TimeRestrictions(earliest_departure=6, latest_departure=20, earliest_arrival=8, latest_arrival=22)
+
+# No restrictions
+time_restrictions = build_time_restrictions()
+# Returns: None
+```
+
+## build_flight_segments
+
+Build flight segments for a search request.
+
+```python
+def build_flight_segments(
+    origin: Airport,
+    destination: Airport,
+    departure_date: str,
+    return_date: str | None = None,
+    time_restrictions: TimeRestrictions | None = None,
+) -> tuple[list[FlightSegment], TripType]
+```
+
+<ParamField path="origin" type="Airport" required>
+  Departure airport enum
+</ParamField>
+
+<ParamField path="destination" type="Airport" required>
+  Arrival airport enum
+</ParamField>
+
+<ParamField path="departure_date" type="str" required>
+  Outbound travel date in YYYY-MM-DD format
+</ParamField>
+
+<ParamField path="return_date" type="str | None">
+  Return travel date in YYYY-MM-DD format. If provided, creates a round-trip search. Optional.
+</ParamField>
+
+<ParamField path="time_restrictions" type="TimeRestrictions | None">
+  Time restrictions to apply to all segments. Optional.
+</ParamField>
+
+**Returns:** Tuple of `(list[FlightSegment], TripType)`
+- List contains one segment for one-way trips, two segments for round-trips
+- TripType is either `TripType.ONE_WAY` or `TripType.ROUND_TRIP`
+
+### Usage
+
+```python
+from fli.core.builders import build_flight_segments, build_time_restrictions
+from fli.core.parsers import resolve_airport
+
+# Parse airports
+origin = resolve_airport("JFK")
+destination = resolve_airport("LHR")
+
+# One-way flight
+segments, trip_type = build_flight_segments(
+    origin=origin,
+    destination=destination,
+    departure_date="2025-06-15"
+)
+# Returns: ([FlightSegment(...)], TripType.ONE_WAY)
+
+# Round-trip flight with time restrictions
+time_restrictions = build_time_restrictions(departure_window="6-20")
+segments, trip_type = build_flight_segments(
+    origin=origin,
+    destination=destination,
+    departure_date="2025-06-15",
+    return_date="2025-06-22",
+    time_restrictions=time_restrictions
+)
+# Returns: ([FlightSegment(...), FlightSegment(...)], TripType.ROUND_TRIP)
+```
+
+## build_date_search_segments
+
+Build flight segments for a date range search.
+
+```python
+def build_date_search_segments(
+    origin: Airport,
+    destination: Airport,
+    start_date: str,
+    trip_duration: int | None = None,
+    is_round_trip: bool = False,
+    time_restrictions: TimeRestrictions | None = None,
+) -> tuple[list[FlightSegment], TripType]
+```
+
+<ParamField path="origin" type="Airport" required>
+  Departure airport enum
+</ParamField>
+
+<ParamField path="destination" type="Airport" required>
+  Arrival airport enum
+</ParamField>
+
+<ParamField path="start_date" type="str" required>
+  Start date of the search range in YYYY-MM-DD format
+</ParamField>
+
+<ParamField path="trip_duration" type="int | None">
+  Duration of the trip in days (for round trips). Defaults to 3 days if not specified. Optional.
+</ParamField>
+
+<ParamField path="is_round_trip" type="bool">
+  Whether to search for round-trip flights. Defaults to False. Optional.
+</ParamField>
+
+<ParamField path="time_restrictions" type="TimeRestrictions | None">
+  Time restrictions to apply to all segments. Optional.
+</ParamField>
+
+**Returns:** Tuple of `(list[FlightSegment], TripType)`
+- For one-way searches: single segment with the start date
+- For round-trip searches: two segments, with return date calculated as start_date + trip_duration
+
+### Usage
+
+```python
+from fli.core.builders import build_date_search_segments, build_time_restrictions
+from fli.core.parsers import resolve_airport
+
+# Parse airports
+origin = resolve_airport("JFK")
+destination = resolve_airport("LHR")
+
+# One-way date search
+segments, trip_type = build_date_search_segments(
+    origin=origin,
+    destination=destination,
+    start_date="2025-06-01"
+)
+# Returns: ([FlightSegment(travel_date='2025-06-01', ...)], TripType.ONE_WAY)
+
+# Round-trip date search with 7-day duration
+segments, trip_type = build_date_search_segments(
+    origin=origin,
+    destination=destination,
+    start_date="2025-06-01",
+    trip_duration=7,
+    is_round_trip=True
+)
+# Returns: ([FlightSegment(travel_date='2025-06-01', ...), FlightSegment(travel_date='2025-06-08', ...)], TripType.ROUND_TRIP)
+
+# Round-trip with default 3-day duration and time restrictions
+time_restrictions = build_time_restrictions(departure_window="6-20")
+segments, trip_type = build_date_search_segments(
+    origin=origin,
+    destination=destination,
+    start_date="2025-06-01",
+    is_round_trip=True,
+    time_restrictions=time_restrictions
+)
+# Returns: ([FlightSegment(travel_date='2025-06-01', ...), FlightSegment(travel_date='2025-06-04', ...)], TripType.ROUND_TRIP)
+```
+
+## Complete example
+
+Here's how the builder functions work together to create a complete flight search:
+
+```python
+from fli.core.parsers import (
+    resolve_airport,
+    parse_airlines,
+    parse_cabin_class,
+    parse_max_stops,
+    parse_sort_by,
+)
+from fli.core.builders import build_flight_segments, build_time_restrictions
+from fli.models import FlightSearchFilters, PassengerInfo
+
+# Parse all inputs
+origin = resolve_airport("JFK")
+destination = resolve_airport("LHR")
+cabin_class = parse_cabin_class("ECONOMY")
+max_stops = parse_max_stops("NON_STOP")
+sort_by = parse_sort_by("CHEAPEST")
+airlines = parse_airlines(["BA", "DL"])
+
+# Build time restrictions and segments
+time_restrictions = build_time_restrictions(departure_window="6-20")
+segments, trip_type = build_flight_segments(
+    origin=origin,
+    destination=destination,
+    departure_date="2025-06-15",
+    return_date="2025-06-22",
+    time_restrictions=time_restrictions
+)
+
+# Create complete search filters
+filters = FlightSearchFilters(
+    trip_type=trip_type,
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=segments,
+    stops=max_stops,
+    seat_type=cabin_class,
+    sort_by=sort_by,
+    airline_filter=airlines,
+)
+
+# Now ready to execute search
+```

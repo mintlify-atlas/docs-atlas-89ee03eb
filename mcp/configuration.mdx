@@ -1,0 +1,269 @@
+---
+title: Configuration
+description: Configure Fli's MCP server with environment variables and settings
+---
+
+The MCP server can be customized using environment variables. All configuration is optional and has sensible defaults.
+
+## Environment variables
+
+All configuration variables use the `FLI_MCP_` prefix.
+
+### FLI_MCP_DEFAULT_PASSENGERS
+
+<ParamField path="FLI_MCP_DEFAULT_PASSENGERS" type="integer" default="1">
+  Default number of adult passengers for searches. Must be at least 1.
+
+  ```bash
+  FLI_MCP_DEFAULT_PASSENGERS=2
+  ```
+</ParamField>
+
+### FLI_MCP_DEFAULT_CURRENCY
+
+<ParamField path="FLI_MCP_DEFAULT_CURRENCY" type="string" default="USD">
+  Three-letter currency code returned with search results. Must be exactly 3 characters.
+
+  ```bash
+  FLI_MCP_DEFAULT_CURRENCY=EUR
+  ```
+</ParamField>
+
+### FLI_MCP_DEFAULT_CABIN_CLASS
+
+<ParamField path="FLI_MCP_DEFAULT_CABIN_CLASS" type="string" default="ECONOMY">
+  Default cabin class when none is specified. Options:
+  - `ECONOMY`
+  - `PREMIUM_ECONOMY`
+  - `BUSINESS`
+  - `FIRST`
+
+  ```bash
+  FLI_MCP_DEFAULT_CABIN_CLASS=BUSINESS
+  ```
+</ParamField>
+
+### FLI_MCP_DEFAULT_SORT_BY
+
+<ParamField path="FLI_MCP_DEFAULT_SORT_BY" type="string" default="CHEAPEST">
+  Default sorting strategy for flight results. Options:
+  - `CHEAPEST` - Sort by lowest price
+  - `DURATION` - Sort by shortest flight time
+  - `DEPARTURE_TIME` - Sort by earliest departure
+  - `ARRIVAL_TIME` - Sort by earliest arrival
+
+  ```bash
+  FLI_MCP_DEFAULT_SORT_BY=DURATION
+  ```
+</ParamField>
+
+### FLI_MCP_DEFAULT_DEPARTURE_WINDOW
+
+<ParamField path="FLI_MCP_DEFAULT_DEPARTURE_WINDOW" type="string">
+  Default departure time window in 'HH-HH' 24-hour format. If not set, no time restriction is applied.
+
+  ```bash
+  FLI_MCP_DEFAULT_DEPARTURE_WINDOW=6-20  # 6am to 8pm
+  ```
+</ParamField>
+
+### FLI_MCP_MAX_RESULTS
+
+<ParamField path="FLI_MCP_MAX_RESULTS" type="integer">
+  Maximum number of results returned by each tool. Must be greater than 0. If not set, all results are returned.
+
+  ```bash
+  FLI_MCP_MAX_RESULTS=10
+  ```
+</ParamField>
+
+## Configuration with Claude Desktop
+
+Set environment variables in your Claude Desktop configuration file:
+
+```json
+{
+  "mcpServers": {
+    "fli": {
+      "command": "fli-mcp",
+      "args": [],
+      "env": {
+        "FLI_MCP_DEFAULT_CURRENCY": "EUR",
+        "FLI_MCP_DEFAULT_CABIN_CLASS": "BUSINESS",
+        "FLI_MCP_DEFAULT_SORT_BY": "DURATION",
+        "FLI_MCP_DEFAULT_DEPARTURE_WINDOW": "8-22",
+        "FLI_MCP_MAX_RESULTS": "10"
+      }
+    }
+  }
+}
+```
+
+### Configuration file locations
+
+**macOS:**
+```
+~/Library/Application Support/Claude/claude_desktop_config.json
+```
+
+**Windows:**
+```
+%APPDATA%\Claude\claude_desktop_config.json
+```
+
+**Linux:**
+```
+~/.config/Claude/claude_desktop_config.json
+```
+
+## Configuration examples
+
+<AccordionGroup>
+  <Accordion title="European traveler">
+    Configure for Euro currency and preferred departure times:
+
+    ```json
+    {
+      "mcpServers": {
+        "fli": {
+          "command": "fli-mcp",
+          "args": [],
+          "env": {
+            "FLI_MCP_DEFAULT_CURRENCY": "EUR",
+            "FLI_MCP_DEFAULT_DEPARTURE_WINDOW": "9-18"
+          }
+        }
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Business traveler">
+    Configure for business class and minimal results:
+
+    ```json
+    {
+      "mcpServers": {
+        "fli": {
+          "command": "fli-mcp",
+          "args": [],
+          "env": {
+            "FLI_MCP_DEFAULT_CABIN_CLASS": "BUSINESS",
+            "FLI_MCP_DEFAULT_SORT_BY": "DEPARTURE_TIME",
+            "FLI_MCP_MAX_RESULTS": "5"
+          }
+        }
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Family travel">
+    Configure for multiple passengers:
+
+    ```json
+    {
+      "mcpServers": {
+        "fli": {
+          "command": "fli-mcp",
+          "args": [],
+          "env": {
+            "FLI_MCP_DEFAULT_PASSENGERS": "4",
+            "FLI_MCP_DEFAULT_SORT_BY": "CHEAPEST"
+          }
+        }
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Budget traveler">
+    Focus on cheapest options with limited results:
+
+    ```json
+    {
+      "mcpServers": {
+        "fli": {
+          "command": "fli-mcp",
+          "args": [],
+          "env": {
+            "FLI_MCP_DEFAULT_SORT_BY": "CHEAPEST",
+            "FLI_MCP_MAX_RESULTS": "3"
+          }
+        }
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## FlightSearchConfig class
+
+The configuration is implemented using the `FlightSearchConfig` Pydantic settings class in `fli/mcp/server.py:51`. This class:
+
+- Automatically loads environment variables with the `FLI_MCP_` prefix
+- Validates all configuration values
+- Provides type safety for configuration options
+- Exposes defaults through the MCP resource endpoint
+
+### Configuration schema
+
+The server exposes its configuration schema through an MCP resource. AI assistants can query this resource to understand the current configuration:
+
+```json
+{
+  "defaults": {
+    "default_passengers": 1,
+    "default_currency": "USD",
+    "default_cabin_class": "ECONOMY",
+    "default_sort_by": "CHEAPEST",
+    "default_departure_window": null,
+    "max_results": null
+  },
+  "schema": {
+    "properties": {
+      "default_passengers": {
+        "type": "integer",
+        "minimum": 1,
+        "description": "Default number of adult passengers to include in searches."
+      },
+      "default_currency": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 3,
+        "description": "Three-letter currency code returned with search results."
+      }
+    }
+  }
+}
+```
+
+## Applying configuration changes
+
+After modifying environment variables:
+
+1. Save the configuration file
+2. Completely quit Claude Desktop (not just close the window)
+3. Restart Claude Desktop
+4. The new configuration will be loaded automatically
+
+## Validating configuration
+
+You can verify your configuration by asking Claude:
+
+```
+What is your current Fli configuration?
+```
+
+Claude can access the configuration resource to show you the active settings.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Tool reference" icon="book" href="/mcp/tools">
+    Learn about search parameters and options
+  </Card>
+  <Card title="Setup guide" icon="gear" href="/mcp/setup">
+    Initial installation and configuration
+  </Card>
+</CardGroup>

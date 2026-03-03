@@ -1,0 +1,538 @@
+---
+title: Advanced usage
+description: Master advanced features like round-trip searches, multi-passenger bookings, and time restrictions
+---
+
+This guide covers advanced Fli features for complex flight searches including round-trip flights, multi-passenger bookings, and time-based restrictions.
+
+## Round-trip searches
+
+Round-trip searches require two flight segments and the `ROUND_TRIP` trip type:
+
+```python
+from datetime import datetime, timedelta
+from fli.models import (
+    Airport,
+    FlightSearchFilters,
+    FlightSegment,
+    PassengerInfo,
+    TripType,
+)
+from fli.search import SearchFlights
+
+outbound_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+return_date = (datetime.now() + timedelta(days=37)).strftime("%Y-%m-%d")
+
+filters = FlightSearchFilters(
+    trip_type=TripType.ROUND_TRIP,
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LAX, 0]],
+            travel_date=outbound_date,
+        ),
+        FlightSegment(
+            departure_airport=[[Airport.LAX, 0]],
+            arrival_airport=[[Airport.JFK, 0]],
+            travel_date=return_date,
+        ),
+    ],
+)
+
+search = SearchFlights()
+results = search.search(filters)
+```
+
+### Processing round-trip results
+
+Round-trip searches return tuples of `(outbound_flight, return_flight)`:
+
+```python
+for outbound, return_flight in results:
+    print("\nOutbound Flight:")
+    for leg in outbound.legs:
+        print(f"Flight: {leg.airline.value} {leg.flight_number}")
+        print(f"Departure: {leg.departure_datetime}")
+        print(f"Arrival: {leg.arrival_datetime}")
+    
+    print("\nReturn Flight:")
+    for leg in return_flight.legs:
+        print(f"Flight: {leg.airline.value} {leg.flight_number}")
+        print(f"Departure: {leg.departure_datetime}")
+        print(f"Arrival: {leg.arrival_datetime}")
+    
+    total_price = outbound.price + return_flight.price
+    print(f"\nTotal Price: ${total_price}")
+```
+
+<Note>
+Round-trip results include separate `FlightResult` objects for outbound and return, making it easy to analyze each direction independently.
+</Note>
+
+### Limiting return flight results
+
+By default, Fli fetches return flights for the top 5 outbound flights. Adjust this with the `top_n` parameter:
+
+```python
+# Get return flights for top 10 outbound flights
+results = search.search(filters, top_n=10)
+
+# Get return flights for top 3 outbound flights (faster)
+results = search.search(filters, top_n=3)
+```
+
+<Warning>
+Increasing `top_n` makes more API requests and takes longer. For round-trip searches with `top_n=10`, Fli makes 11 requests (1 for outbound + 10 for returns).
+</Warning>
+
+## Multi-passenger bookings
+
+Search for flights with multiple passengers using the `PassengerInfo` model:
+
+```python
+from fli.models import PassengerInfo
+
+# Family of 4: 2 adults, 1 child, 1 infant
+filters = FlightSearchFilters(
+    passenger_info=PassengerInfo(
+        adults=2,
+        children=1,
+        infants_on_lap=1,
+        infants_in_seat=0
+    ),
+    # ... other parameters
+)
+```
+
+### Passenger types
+
+- `adults` - Passengers 18 years and older
+- `children` - Passengers 2-17 years old
+- `infants_on_lap` - Infants under 2 years old sitting on a lap (no seat)
+- `infants_in_seat` - Infants under 2 years old with their own seat
+
+### Pricing with multiple passengers
+
+The returned `flight.price` is the **total price for all passengers**:
+
+```python
+filters = FlightSearchFilters(
+    passenger_info=PassengerInfo(adults=2, children=1),
+    # ... other parameters
+)
+
+results = search.search(filters)
+
+for flight in results:
+    total_price = flight.price
+    per_person = total_price / 3  # 2 adults + 1 child
+    print(f"Total: ${total_price:.2f}")
+    print(f"Per person: ${per_person:.2f}")
+```
+
+<Accordion title="Complete multi-passenger example">
+```python
+from datetime import datetime, timedelta
+from fli.models import (
+    Airline,
+    Airport,
+    FlightSearchFilters,
+    FlightSegment,
+    LayoverRestrictions,
+    MaxStops,
+    PassengerInfo,
+    SeatType,
+)
+from fli.search import SearchFlights
+
+filters = FlightSearchFilters(
+    passenger_info=PassengerInfo(
+        adults=2,
+        children=1,
+        infants_on_lap=1
+    ),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LHR, 0]],
+            travel_date=(datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+        )
+    ],
+    seat_type=SeatType.BUSINESS,
+    stops=MaxStops.ONE_STOP_OR_FEWER,
+    airlines=[Airline.BA, Airline.VS],
+    max_duration=720,
+    layover_restrictions=LayoverRestrictions(
+        airports=[Airport.BOS, Airport.ORD],
+        max_duration=180
+    ),
+)
+
+search = SearchFlights()
+results = search.search(filters)
+
+for i, flight in enumerate(results, 1):
+    print(f"\n--- Flight {i} ---")
+    print(f"Total Price: ${flight.price}")
+    print(f"Duration: {flight.duration} minutes")
+    print(f"Stops: {flight.stops}")
+    
+    for j, leg in enumerate(flight.legs, 1):
+        print(f"\nLeg {j}: {leg.airline.value} {leg.flight_number}")
+        print(f"  From: {leg.departure_airport.value} at {leg.departure_datetime}")
+        print(f"  To: {leg.arrival_airport.value} at {leg.arrival_datetime}")
+```
+</Accordion>
+
+## Time restrictions
+
+Control departure and arrival times for each flight segment:
+
+```python
+from fli.models import TimeRestrictions
+
+filters = FlightSearchFilters(
+    # ... other parameters
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LAX, 0]],
+            travel_date="2026-04-15",
+            time_restrictions=TimeRestrictions(
+                earliest_departure=6,   # 6:00 AM
+                latest_departure=10,     # 10:00 AM
+                earliest_arrival=12,     # 12:00 PM
+                latest_arrival=18        # 6:00 PM
+            )
+        )
+    ]
+)
+```
+
+### Time format
+
+All times are in **hours from midnight (0-23)** in local airport time:
+
+- `0` = midnight
+- `6` = 6:00 AM
+- `12` = noon
+- `18` = 6:00 PM
+- `23` = 11:00 PM
+
+### Different restrictions per segment
+
+Apply different time restrictions to each segment of a round-trip:
+
+```python
+filters = FlightSearchFilters(
+    trip_type=TripType.ROUND_TRIP,
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[
+        # Outbound: morning departure
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LAX, 0]],
+            travel_date=outbound_date,
+            time_restrictions=TimeRestrictions(
+                earliest_departure=6,
+                latest_departure=12
+            )
+        ),
+        # Return: afternoon departure
+        FlightSegment(
+            departure_airport=[[Airport.LAX, 0]],
+            arrival_airport=[[Airport.JFK, 0]],
+            travel_date=return_date,
+            time_restrictions=TimeRestrictions(
+                earliest_departure=14,
+                latest_departure=20
+            )
+        ),
+    ],
+)
+```
+
+<Note>
+Time restrictions are per segment. For multi-leg flights, the restriction applies to the first leg's departure and last leg's arrival.
+</Note>
+
+## Date range searches
+
+Find the cheapest dates to fly within a date range using `SearchDates`:
+
+```python
+from datetime import datetime, timedelta
+from fli.models import (
+    Airport,
+    DateSearchFilters,
+    FlightSegment,
+    PassengerInfo,
+    SeatType,
+    TripType,
+)
+from fli.search import SearchDates
+
+base_date = datetime.now() + timedelta(days=30)
+travel_date = base_date.strftime("%Y-%m-%d")
+from_date = base_date.strftime("%Y-%m-%d")
+to_date = (base_date + timedelta(days=30)).strftime("%Y-%m-%d")
+
+filters = DateSearchFilters(
+    trip_type=TripType.ONE_WAY,
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LAX, 0]],
+            travel_date=travel_date,
+        )
+    ],
+    from_date=from_date,
+    to_date=to_date,
+    seat_type=SeatType.ECONOMY,
+)
+
+search = SearchDates()
+results = search.search(filters)
+
+for result in results:
+    date_str = result.date[0].strftime("%Y-%m-%d")
+    print(f"{date_str}: ${result.price}")
+```
+
+### Round-trip date searches
+
+For round-trips, specify the trip duration:
+
+```python
+filters = DateSearchFilters(
+    trip_type=TripType.ROUND_TRIP,
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LAX, 0]],
+            travel_date=travel_date,
+        ),
+        FlightSegment(
+            departure_airport=[[Airport.LAX, 0]],
+            arrival_airport=[[Airport.JFK, 0]],
+            travel_date=(base_date + timedelta(days=7)).strftime("%Y-%m-%d"),
+        ),
+    ],
+    from_date=from_date,
+    to_date=to_date,
+    duration=7,  # 7-day trip
+)
+
+results = search.search(filters)
+
+for result in results:
+    outbound = result.date[0].strftime("%Y-%m-%d")
+    return_date = result.date[1].strftime("%Y-%m-%d")
+    print(f"Outbound: {outbound}, Return: {return_date} - ${result.price}")
+```
+
+<Warning>
+Date range searches are limited to 305 days in the future. Fli automatically splits searches longer than 61 days into multiple API calls.
+</Warning>
+
+### Filtering date results
+
+Filter results by day of the week or other criteria:
+
+```python
+# Find weekend flights only
+weekend_results = [
+    r for r in results
+    if r.date[0].weekday() >= 5  # Saturday = 5, Sunday = 6
+]
+
+print(f"Found {len(weekend_results)} weekend flights:")
+for result in weekend_results:
+    day_name = result.date[0].strftime("%A")
+    date_str = result.date[0].strftime("%Y-%m-%d")
+    print(f"{day_name}, {date_str}: ${result.price}")
+```
+
+## Layover control
+
+Manage layover airports and durations:
+
+```python
+from fli.models import LayoverRestrictions
+
+filters = FlightSearchFilters(
+    # ... other parameters
+    layover_restrictions=LayoverRestrictions(
+        airports=[Airport.ORD, Airport.DFW],  # Prefer these layover airports
+        max_duration=180  # Maximum 3 hours (180 minutes)
+    )
+)
+```
+
+### Layover preferences
+
+The `airports` parameter suggests preferred layover locations but doesn't guarantee them:
+
+```python
+# Prefer European hubs for transatlantic flights
+layover_restrictions=LayoverRestrictions(
+    airports=[Airport.LHR, Airport.CDG, Airport.AMS],
+    max_duration=240  # 4 hours max
+)
+```
+
+<Note>
+The `max_duration` applies to each individual layover, not the total layover time for multi-stop flights.
+</Note>
+
+## Processing flight legs
+
+Each `FlightResult` contains one or more `FlightLeg` objects:
+
+```python
+for flight in results:
+    print(f"Flight with {len(flight.legs)} leg(s):")
+    
+    for i, leg in enumerate(flight.legs, 1):
+        print(f"\nLeg {i}:")
+        print(f"  Airline: {leg.airline.value}")
+        print(f"  Flight: {leg.flight_number}")
+        print(f"  From: {leg.departure_airport.value}")
+        print(f"  To: {leg.arrival_airport.value}")
+        print(f"  Departs: {leg.departure_datetime}")
+        print(f"  Arrives: {leg.arrival_datetime}")
+        print(f"  Duration: {leg.duration} minutes")
+    
+    # Calculate layover times for multi-leg flights
+    if len(flight.legs) > 1:
+        for i in range(len(flight.legs) - 1):
+            arrival = flight.legs[i].arrival_datetime
+            next_departure = flight.legs[i + 1].departure_datetime
+            layover = (next_departure - arrival).total_seconds() / 60
+            print(f"\nLayover {i + 1}: {layover:.0f} minutes")
+```
+
+## Result analysis
+
+Analyze search results to find patterns:
+
+```python
+def analyze_results(results):
+    """Analyze flight search results."""
+    if not results:
+        print("No results to analyze")
+        return
+    
+    # Price statistics
+    prices = [flight.price for flight in results]
+    print(f"Price range: ${min(prices):.2f} - ${max(prices):.2f}")
+    print(f"Average: ${sum(prices) / len(prices):.2f}")
+    
+    # Duration statistics
+    durations = [flight.duration for flight in results]
+    print(f"\nDuration range: {min(durations)} - {max(durations)} minutes")
+    print(f"Average: {sum(durations) / len(durations):.0f} minutes")
+    
+    # Airline distribution
+    airlines = {}
+    for flight in results:
+        for leg in flight.legs:
+            airline = leg.airline.value
+            airlines[airline] = airlines.get(airline, 0) + 1
+    
+    print("\nAirlines:")
+    for airline, count in sorted(airlines.items(), key=lambda x: x[1], reverse=True):
+        print(f"  {airline}: {count} flights")
+    
+    # Stop distribution
+    stops = {}
+    for flight in results:
+        stops[flight.stops] = stops.get(flight.stops, 0) + 1
+    
+    print("\nStops:")
+    for stop_count, freq in sorted(stops.items()):
+        stop_label = "non-stop" if stop_count == 0 else f"{stop_count} stop(s)"
+        print(f"  {stop_label}: {freq} flights")
+
+results = search.search(filters)
+analyze_results(results)
+```
+
+<Accordion title="Advanced analysis with pandas">
+```python
+import pandas as pd
+from fli.models import FlightResult
+
+def results_to_dataframe(results: list[FlightResult]) -> pd.DataFrame:
+    """Convert results to pandas DataFrame for analysis."""
+    flights_data = []
+    
+    for flight in results:
+        for leg in flight.legs:
+            flights_data.append({
+                "price": flight.price,
+                "total_duration": flight.duration,
+                "stops": flight.stops,
+                "airline": leg.airline.value,
+                "flight_number": leg.flight_number,
+                "departure_airport": leg.departure_airport.value,
+                "arrival_airport": leg.arrival_airport.value,
+                "departure_time": leg.departure_datetime,
+                "arrival_time": leg.arrival_datetime,
+                "leg_duration": leg.duration,
+            })
+    
+    df = pd.DataFrame(flights_data)
+    
+    print("Price statistics:")
+    print(df["price"].describe())
+    
+    print("\nAirlines distribution:")
+    print(df["airline"].value_counts())
+    
+    print("\nAverage duration by airline:")
+    print(df.groupby("airline")["total_duration"].mean().sort_values())
+    
+    return df
+
+# Usage
+df = results_to_dataframe(results)
+df.to_csv("flight_analysis.csv", index=False)
+```
+</Accordion>
+
+## Builder utilities
+
+Use builder functions for common search patterns:
+
+```python
+from fli.core.builders import build_flight_segments, build_time_restrictions
+from fli.models import Airport, FlightSearchFilters, PassengerInfo
+
+# Build flight segments with time restrictions
+time_restrictions = build_time_restrictions(
+    departure_window="6-10",  # 6 AM to 10 AM
+    arrival_window="14-20"    # 2 PM to 8 PM
+)
+
+segments, trip_type = build_flight_segments(
+    origin=Airport.JFK,
+    destination=Airport.LAX,
+    departure_date="2026-04-15",
+    return_date="2026-04-22",
+    time_restrictions=time_restrictions
+)
+
+filters = FlightSearchFilters(
+    trip_type=trip_type,
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=segments
+)
+```
+
+<Note>
+The builder utilities automatically set the `trip_type` based on whether a `return_date` is provided.
+</Note>

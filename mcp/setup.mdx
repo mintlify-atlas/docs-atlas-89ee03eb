@@ -1,0 +1,194 @@
+---
+title: Setup
+description: Install and configure Fli's MCP server with Claude Desktop
+---
+
+## Prerequisites
+
+Before setting up the MCP server, ensure you have:
+
+- Python 3.10 or higher installed
+- [Claude Desktop](https://claude.ai/download) installed
+- Command line access
+
+## Installation
+
+<Steps>
+  <Step title="Install Fli">
+    Install Fli using pip or uv:
+
+    ```bash
+    pip install fli
+    ```
+
+    Or with uv:
+
+    ```bash
+    uv pip install fli
+    ```
+
+    This installs both the library and the `fli-mcp` command.
+  </Step>
+
+  <Step title="Verify installation">
+    Confirm the MCP server is installed correctly:
+
+    ```bash
+    fli-mcp --help
+    ```
+
+    You should see the help output for the MCP server command.
+  </Step>
+
+  <Step title="Locate Claude Desktop config">
+    Find your Claude Desktop configuration file:
+
+    **macOS:**
+    ```
+    ~/Library/Application Support/Claude/claude_desktop_config.json
+    ```
+
+    **Windows:**
+    ```
+    %APPDATA%\Claude\claude_desktop_config.json
+    ```
+
+    **Linux:**
+    ```
+    ~/.config/Claude/claude_desktop_config.json
+    ```
+  </Step>
+
+  <Step title="Add Fli to Claude Desktop">
+    Edit the configuration file to add Fli's MCP server. Create the file if it doesn't exist.
+
+    ```json
+    {
+      "mcpServers": {
+        "fli": {
+          "command": "fli-mcp",
+          "args": []
+        }
+      }
+    }
+    ```
+
+    If you're using uv, you can specify the full path:
+
+    ```json
+    {
+      "mcpServers": {
+        "fli": {
+          "command": "uv",
+          "args": ["run", "--with", "fli", "fli-mcp"]
+        }
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Restart Claude Desktop">
+    Completely quit and restart Claude Desktop for the changes to take effect.
+
+    The MCP server will start automatically when Claude Desktop launches.
+  </Step>
+
+  <Step title="Verify connection">
+    In Claude Desktop, start a new conversation and ask:
+
+    ```
+    Can you search for flights?
+    ```
+
+    Claude should respond indicating it has access to the `search_flights` and `search_dates` tools.
+  </Step>
+</Steps>
+
+## Configuration (optional)
+
+You can customize the MCP server behavior using environment variables. Add them to your Claude Desktop configuration:
+
+```json
+{
+  "mcpServers": {
+    "fli": {
+      "command": "fli-mcp",
+      "args": [],
+      "env": {
+        "FLI_MCP_DEFAULT_CURRENCY": "EUR",
+        "FLI_MCP_DEFAULT_CABIN_CLASS": "BUSINESS",
+        "FLI_MCP_MAX_RESULTS": "10"
+      }
+    }
+  }
+}
+```
+
+See the [configuration guide](/mcp/configuration) for all available options.
+
+## Testing the connection
+
+Try these example queries in Claude Desktop:
+
+<AccordionGroup>
+  <Accordion title="Search for specific flights">
+    ```
+    Find flights from JFK to LHR on March 15th, 2026
+    ```
+
+    Claude will use the `search_flights` tool to return available flights with prices.
+  </Accordion>
+
+  <Accordion title="Find cheapest dates">
+    ```
+    What are the cheapest dates to fly from SFO to NRT between 
+    April 1st and April 30th for a 7-day trip?
+    ```
+
+    Claude will use the `search_dates` tool to compare prices across the date range.
+  </Accordion>
+
+  <Accordion title="Complex filters">
+    ```
+    Show me non-stop business class flights from LAX to CDG 
+    departing between 6pm and 10pm on March 20th
+    ```
+
+    Claude will apply the appropriate filters to the search.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Claude doesn't see the tools">
+    - Ensure you completely quit and restarted Claude Desktop (not just closed the window)
+    - Check that the `fli-mcp` command works in your terminal
+    - Verify the configuration file path is correct for your operating system
+    - Check the Claude Desktop logs for connection errors
+  </Accordion>
+
+  <Accordion title="Command not found error">
+    - Verify Fli is installed in your Python environment
+    - If using a virtual environment, provide the full path to the `fli-mcp` command
+    - Try the uv-based configuration shown in Step 4
+  </Accordion>
+
+  <Accordion title="Rate limiting errors">
+    The server has a built-in 10 requests/second limit with automatic retries. If you hit rate limits:
+    - Wait a few seconds between searches
+    - The server will automatically retry with exponential backoff
+    - Consider adding a small delay between multiple consecutive searches
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Tool reference" icon="book" href="/mcp/tools">
+    Learn about all available search parameters
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/mcp/configuration">
+    Customize defaults and behavior
+  </Card>
+</CardGroup>

@@ -1,0 +1,144 @@
+---
+title: SearchFlights
+description: Flight search implementation using Google Flights API
+---
+
+## Overview
+
+The `SearchFlights` class handles searching for specific flights with detailed filters, parsing the results into structured data models. It interfaces directly with Google Flights' API to find available flights and their details.
+
+## Class initialization
+
+```python
+from fli.search import SearchFlights
+
+searcher = SearchFlights()
+```
+
+Initializes the search client for flight searches. No parameters required.
+
+## Methods
+
+### search
+
+Search for flights using the given filters.
+
+```python
+def search(
+    self,
+    filters: FlightSearchFilters,
+    top_n: int = 5
+) -> list[FlightResult | tuple[FlightResult, FlightResult]] | None
+```
+
+<ParamField path="filters" type="FlightSearchFilters" required>
+  Full flight search object including airports, dates, and preferences
+</ParamField>
+
+<ParamField path="top_n" type="int" default="5">
+  Number of flights to limit the return flight search to
+</ParamField>
+
+<ResponseField name="return" type="list[FlightResult | tuple[FlightResult, FlightResult]] | None">
+  For one-way trips: list of `FlightResult` objects containing flight details
+  
+  For round-trip: list of tuples containing (outbound `FlightResult`, return `FlightResult`) pairs
+  
+  Returns `None` if no results found
+</ResponseField>
+
+**Raises:**
+- `Exception`: If the search fails or returns invalid data
+
+**Example:**
+
+```python
+from fli.search import SearchFlights
+from fli.models import FlightSearchFilters, FlightSegment, Airport
+from fli.models.google_flights.base import TripType
+
+# Create search filters
+filters = FlightSearchFilters(
+    trip_type=TripType.ROUND_TRIP,
+    flight_segments=[
+        FlightSegment(
+            origin=Airport.LAX,
+            destination=Airport.JFK,
+            travel_date="2026-04-15"
+        ),
+        FlightSegment(
+            origin=Airport.JFK,
+            destination=Airport.LAX,
+            travel_date="2026-04-22"
+        )
+    ]
+)
+
+# Search for flights
+searcher = SearchFlights()
+results = searcher.search(filters, top_n=10)
+
+if results:
+    for outbound, return_flight in results:
+        print(f"${outbound.price} - {outbound.duration} min")
+```
+
+## Return types
+
+### FlightResult
+
+Each `FlightResult` object contains:
+
+<ResponseField name="price" type="float">
+  Flight price in the search currency
+</ResponseField>
+
+<ResponseField name="duration" type="int">
+  Total flight duration in minutes
+</ResponseField>
+
+<ResponseField name="stops" type="int">
+  Number of stops (0 for non-stop)
+</ResponseField>
+
+<ResponseField name="legs" type="list[FlightLeg]">
+  List of individual flight leg details
+</ResponseField>
+
+### FlightLeg
+
+Each `FlightLeg` object contains:
+
+<ResponseField name="airline" type="Airline">
+  Airline operating the flight leg
+</ResponseField>
+
+<ResponseField name="flight_number" type="str">
+  Flight number (e.g., "AA123")
+</ResponseField>
+
+<ResponseField name="departure_airport" type="Airport">
+  Departure airport code
+</ResponseField>
+
+<ResponseField name="arrival_airport" type="Airport">
+  Arrival airport code
+</ResponseField>
+
+<ResponseField name="departure_datetime" type="datetime">
+  Departure date and time
+</ResponseField>
+
+<ResponseField name="arrival_datetime" type="datetime">
+  Arrival date and time
+</ResponseField>
+
+<ResponseField name="duration" type="int">
+  Leg duration in minutes
+</ResponseField>
+
+## Notes
+
+- For round-trip searches, the method automatically searches for return flights for the top N outbound flights
+- The search client includes automatic rate limiting (10 req/sec) and retries
+- Prices may be 0.0 if price data is unavailable from the API

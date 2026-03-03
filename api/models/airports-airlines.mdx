@@ -1,0 +1,132 @@
+---
+title: Airports and airlines
+description: Enumerations of airports and airlines with IATA codes
+---
+
+## Airport
+
+Airport codes for airports worldwide using IATA 3-letter codes.
+
+### Usage
+
+```python
+from fli.models import Airport
+
+# Access airports by IATA code
+origin = Airport.JFK  # John F. Kennedy International Airport
+destination = Airport.LAX  # Los Angeles International Airport
+sfo = Airport.SFO  # San Francisco International Airport
+```
+
+### Common airports
+
+The `Airport` enum contains hundreds of airport codes. Here are some commonly used examples:
+
+- **JFK** - John F. Kennedy International Airport (New York)
+- **LAX** - Los Angeles International Airport
+- **ORD** - O'Hare International Airport (Chicago)
+- **ATL** - Hartsfield-Jackson Atlanta International Airport
+- **DFW** - Dallas/Fort Worth International Airport
+- **DEN** - Denver International Airport
+- **SFO** - San Francisco International Airport
+- **LAS** - Las Vegas McCarran International Airport
+- **SEA** - Seattle-Tacoma International Airport
+- **MIA** - Miami International Airport
+- **LHR** - London Heathrow Airport
+- **CDG** - Charles de Gaulle Airport (Paris)
+- **AMS** - Amsterdam Airport Schiphol
+- **FRA** - Frankfurt Airport
+- **NRT** - Narita International Airport (Tokyo)
+- **HND** - Tokyo Haneda Airport
+- **SIN** - Singapore Changi Airport
+- **DXB** - Dubai International Airport
+- **SYD** - Sydney Kingsford Smith Airport
+- **YYZ** - Toronto Pearson International Airport
+
+### All airports
+
+The enum is auto-generated from `data/airports.csv` and includes airports worldwide. Each airport is represented by its IATA code as the enum name, with the airport name as the value.
+
+## Airline
+
+Airline codes for airlines worldwide using IATA 2-letter codes.
+
+### Usage
+
+```python
+from fli.models import Airline
+
+# Access airlines by IATA code
+american = Airline.AA  # American Airlines
+united = Airline.UA  # United Airlines
+delta = Airline.DL  # Delta Air Lines
+```
+
+### Major airlines
+
+The `Airline` enum contains over 1,000 airline codes. Here are some major carriers:
+
+#### North American carriers
+
+- **AA** - American Airlines
+- **DL** - Delta Air Lines
+- **UA** - United Airlines
+- **WN** - Southwest Airlines
+- **AS** - Alaska Airlines
+- **B6** - JetBlue
+- **NK** - Spirit Airlines
+- **F9** - Frontier Airlines
+- **AC** - Air Canada
+- **AM** - AeroMexico
+
+#### European carriers
+
+- **LH** - Lufthansa Cargo
+- **BA** - British Airways
+- **AF** - Air France
+- **KL** - KLM
+- **IB** - Iberia
+- **AZ** - Alitalia
+- **LX** - Swiss International Air Lines
+- **OS** - Austrian Airlines
+- **SN** - Brussels Airlines
+- **FR** - Ryanair
+- **U2** - easyJet
+
+#### Asian carriers
+
+- **NH** - All Nippon Airways
+- **JL** - Japan Airlines
+- **SQ** - Singapore Airlines
+- **CX** - Cathay Pacific
+- **CA** - Air China
+- **MU** - China Eastern Airlines
+- **CZ** - China Southern Airlines
+- **KE** - Korean Air
+- **OZ** - Asiana Airlines
+- **TG** - Thai Airways
+
+#### Middle Eastern carriers
+
+- **EK** - Emirates
+- **QR** - Qatar Airways
+- **EY** - Etihad Airways
+- **SV** - Saudia
+- **MS** - EgyptAir
+
+#### Other major carriers
+
+- **QF** - Qantas
+- **NZ** - Air New Zealand
+- **LA** - LATAM Chile
+- **AV** - Avianca
+- **SA** - South African Airways
+- **ET** - Ethiopian Airlines
+
+### All airlines
+
+The enum is auto-generated from `data/airlines.csv` and includes airlines worldwide. Each airline is represented by its IATA code as the enum name, with the airline name as the value.
+
+<Note>
+  Some enum values start with an underscore (e.g., `_0B`, `_1A`) because Python identifiers cannot start with a number. Access these using the underscore prefix.
+</Note>

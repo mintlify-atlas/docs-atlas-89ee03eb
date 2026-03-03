@@ -1,0 +1,270 @@
+---
+title: MCP tools
+description: Reference for search_flights and search_dates MCP tools
+---
+
+Fli's MCP server provides two tools for searching flight data. Both tools return real-time results from Google Flights.
+
+## search_flights
+
+Search for flights between two airports on a specific date. Returns a list of available flights with prices, durations, and leg details.
+
+### Parameters
+
+<ParamField path="origin" type="string" required>
+  Departure airport IATA code (e.g., 'JFK', 'LAX', 'SFO')
+</ParamField>
+
+<ParamField path="destination" type="string" required>
+  Arrival airport IATA code (e.g., 'LHR', 'NRT', 'CDG')
+</ParamField>
+
+<ParamField path="departure_date" type="string" required>
+  Outbound travel date in YYYY-MM-DD format (e.g., '2026-03-15')
+</ParamField>
+
+<ParamField path="return_date" type="string">
+  Return date in YYYY-MM-DD format. Omit for one-way flights.
+</ParamField>
+
+<ParamField path="departure_window" type="string">
+  Preferred departure time window in 'HH-HH' 24-hour format (e.g., '6-20' for 6am to 8pm). Uses the configured default if not specified.
+</ParamField>
+
+<ParamField path="airlines" type="list[string]">
+  Filter results by airline IATA codes (e.g., ['BA', 'AA', 'UA']). Omit to search all airlines.
+</ParamField>
+
+<ParamField path="cabin_class" type="string" default="ECONOMY">
+  Cabin class preference. Options:
+  - `ECONOMY` - Standard economy seating
+  - `PREMIUM_ECONOMY` - Premium economy with extra legroom
+  - `BUSINESS` - Business class
+  - `FIRST` - First class
+</ParamField>
+
+<ParamField path="max_stops" type="string" default="ANY">
+  Maximum number of stops allowed. Options:
+  - `ANY` - Include all flight options
+  - `NON_STOP` - Direct flights only
+  - `ONE_STOP` - Up to one connection
+  - `TWO_PLUS_STOPS` - Up to two or more connections
+</ParamField>
+
+<ParamField path="sort_by" type="string" default="CHEAPEST">
+  How to sort the results. Options:
+  - `CHEAPEST` - Lowest price first
+  - `DURATION` - Shortest flight time first
+  - `DEPARTURE_TIME` - Earliest departure first
+  - `ARRIVAL_TIME` - Earliest arrival first
+</ParamField>
+
+<ParamField path="passengers" type="integer" default="1">
+  Number of adult passengers. Must be at least 1.
+</ParamField>
+
+### Response format
+
+Returns a JSON object with the following structure:
+
+```json
+{
+  "success": true,
+  "flights": [
+    {
+      "price": 450.50,
+      "currency": "USD",
+      "legs": [
+        {
+          "departure_airport": "JFK",
+          "arrival_airport": "LHR",
+          "departure_time": "2026-03-15T18:30:00",
+          "arrival_time": "2026-03-16T06:45:00",
+          "duration": "7h 15m",
+          "airline": "BA",
+          "flight_number": "BA178"
+        }
+      ]
+    }
+  ],
+  "count": 1,
+  "trip_type": "ONE_WAY"
+}
+```
+
+### Example usage
+
+<CodeGroup>
+```txt One-way flight
+Search for flights from JFK to LHR on March 15th, 2026
+```
+
+```txt Round-trip flight
+Find round-trip flights from LAX to NRT, departing March 20th 
+and returning March 27th
+```
+
+```txt Non-stop only
+Show me direct flights from SFO to CDG on April 1st
+```
+
+```txt Evening departures
+Find business class flights from ORD to LHR on May 10th 
+departing between 6pm and 11pm
+```
+
+```txt Specific airline
+Search for British Airways flights from JFK to LHR on March 15th
+```
+</CodeGroup>
+
+## search_dates
+
+Find the cheapest travel dates between two airports within a date range. Returns a list of dates with their prices, useful for flexible travel planning.
+
+### Parameters
+
+<ParamField path="origin" type="string" required>
+  Departure airport IATA code (e.g., 'JFK', 'LAX', 'SFO')
+</ParamField>
+
+<ParamField path="destination" type="string" required>
+  Arrival airport IATA code (e.g., 'LHR', 'NRT', 'CDG')
+</ParamField>
+
+<ParamField path="start_date" type="string" required>
+  Start of the date range to search in YYYY-MM-DD format (e.g., '2026-04-01')
+</ParamField>
+
+<ParamField path="end_date" type="string" required>
+  End of the date range to search in YYYY-MM-DD format (e.g., '2026-04-30')
+</ParamField>
+
+<ParamField path="trip_duration" type="integer" default="3">
+  Trip duration in days for round-trip searches. Only used when `is_round_trip` is true. Must be at least 1.
+</ParamField>
+
+<ParamField path="is_round_trip" type="boolean" default="false">
+  Whether to search for round-trip flights. Set to true to find round-trip prices, false for one-way.
+</ParamField>
+
+<ParamField path="airlines" type="list[string]">
+  Filter results by airline IATA codes (e.g., ['BA', 'AA', 'UA']). Omit to search all airlines.
+</ParamField>
+
+<ParamField path="cabin_class" type="string" default="ECONOMY">
+  Cabin class preference. Options:
+  - `ECONOMY` - Standard economy seating
+  - `PREMIUM_ECONOMY` - Premium economy with extra legroom
+  - `BUSINESS` - Business class
+  - `FIRST` - First class
+</ParamField>
+
+<ParamField path="max_stops" type="string" default="ANY">
+  Maximum number of stops allowed. Options:
+  - `ANY` - Include all flight options
+  - `NON_STOP` - Direct flights only
+  - `ONE_STOP` - Up to one connection
+  - `TWO_PLUS_STOPS` - Up to two or more connections
+</ParamField>
+
+<ParamField path="departure_window" type="string">
+  Preferred departure time window in 'HH-HH' 24-hour format (e.g., '6-20' for 6am to 8pm). Uses the configured default if not specified.
+</ParamField>
+
+<ParamField path="sort_by_price" type="boolean" default="false">
+  Whether to sort results by price (lowest first). Set to true for price-sorted results.
+</ParamField>
+
+<ParamField path="passengers" type="integer" default="1">
+  Number of adult passengers. Must be at least 1.
+</ParamField>
+
+### Response format
+
+Returns a JSON object with the following structure:
+
+```json
+{
+  "success": true,
+  "dates": [
+    {
+      "date": "2026-04-05",
+      "price": 425.00,
+      "currency": "USD",
+      "return_date": "2026-04-12"
+    },
+    {
+      "date": "2026-04-08",
+      "price": 438.50,
+      "currency": "USD",
+      "return_date": "2026-04-15"
+    }
+  ],
+  "count": 2,
+  "trip_type": "ROUND_TRIP",
+  "date_range": "2026-04-01 to 2026-04-30",
+  "duration": 7
+}
+```
+
+### Example usage
+
+<CodeGroup>
+```txt Flexible dates
+What are the cheapest dates to fly from SFO to NRT in April?
+```
+
+```txt Round-trip search
+Find the cheapest week-long trips from LAX to CDG between 
+May 1st and May 31st
+```
+
+```txt One-way dates
+Show me the cheapest one-way dates from JFK to LHR in the 
+next 30 days
+```
+
+```txt With filters
+Find the cheapest non-stop round-trip dates from ORD to LHR 
+in June for a 5-day trip
+```
+</CodeGroup>
+
+## Error handling
+
+Both tools return error information in the response when searches fail:
+
+```json
+{
+  "success": false,
+  "error": "Invalid airport code: XXX",
+  "flights": []  // or "dates": []
+}
+```
+
+Common errors:
+
+- Invalid airport codes: Use 3-letter IATA codes (e.g., 'JFK' not 'New York')
+- Invalid date format: Use YYYY-MM-DD format
+- Invalid parameter values: Check the allowed values for cabin_class, max_stops, etc.
+- Rate limiting: The server automatically retries, but very frequent searches may fail
+
+## Rate limits
+
+The MCP server has a built-in rate limit of 10 requests per second with automatic retry logic. If you encounter rate limit errors:
+
+- Wait a few seconds between searches
+- The server will automatically retry with exponential backoff
+- Consider spacing out multiple consecutive searches
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="sliders" href="/mcp/configuration">
+    Customize default values and behavior
+  </Card>
+  <Card title="Setup guide" icon="gear" href="/mcp/setup">
+    Configure the MCP server with Claude Desktop
+  </Card>
+</CardGroup>

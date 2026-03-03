@@ -1,0 +1,234 @@
+---
+title: Installation
+description: Install Fli using pip, pipx, or uv for CLI, Python API, and MCP server access
+---
+
+Fli can be installed in multiple ways depending on your use case. Choose the method that best fits your needs.
+
+## Requirements
+
+- Python 3.10 or higher
+- pip, pipx, or uv package manager
+
+<Note>
+Fli requires Python 3.10+ and works on Linux, macOS, and Windows.
+</Note>
+
+## Installation methods
+
+<Tabs>
+  <Tab title="pipx (recommended for CLI)">
+    pipx is the recommended way to install Fli if you primarily want to use the CLI or MCP server. It installs the package in an isolated environment while making the commands globally available.
+
+    ```bash
+    # Install pipx if you don't have it
+    python3 -m pip install --user pipx
+    python3 -m pipx ensurepath
+
+    # Install Fli
+    pipx install flights
+    ```
+
+    After installation, you can use the CLI commands directly:
+
+    ```bash
+    fli --help
+    fli-mcp
+    fli-mcp-http
+    ```
+
+    <Tip>
+    pipx is ideal for CLI tools because it installs them in isolated environments, preventing dependency conflicts with other Python projects.
+    </Tip>
+  </Tab>
+
+  <Tab title="pip">
+    Use pip if you want to use Fli as a library in your Python projects or install it in a virtual environment.
+
+    ```bash
+    # Create a virtual environment (recommended)
+    python3 -m venv venv
+    source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+    # Install Fli
+    pip install flights
+    ```
+
+    You can now import Fli in your Python code:
+
+    ```python
+    from fli.models import Airport, FlightSearchFilters
+    from fli.search import SearchFlights
+    ```
+  </Tab>
+
+  <Tab title="uv">
+    uv is a fast Python package installer and resolver. Use it for development or if you prefer modern tooling.
+
+    ```bash
+    # Install uv if you don't have it
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+
+    # Install Fli
+    uv pip install flights
+    ```
+
+    You can also run Fli commands directly with uv:
+
+    ```bash
+    # Run CLI without installing
+    uvx flights flights JFK LAX 2025-10-25
+
+    # Run MCP server
+    uvx flights fli-mcp
+    ```
+
+    <Tip>
+    uv is significantly faster than pip and includes built-in virtual environment management.
+    </Tip>
+  </Tab>
+</Tabs>
+
+## Verify installation
+
+After installation, verify that Fli is installed correctly:
+
+<CodeGroup>
+```bash CLI
+# Check Fli version
+fli --help
+
+# You should see the help message with available commands
+```
+
+```bash Python
+# Start a Python interpreter
+python3
+
+# Import Fli
+>>> from fli.search import SearchFlights
+>>> from fli.models import Airport
+>>> print(Airport.JFK.value)
+JFK
+```
+
+```bash MCP Server
+# Check MCP server
+which fli-mcp
+
+# Should show the path to the MCP server executable
+# Example: /Users/username/.local/bin/fli-mcp
+```
+</CodeGroup>
+
+## Available commands
+
+After installation, the following commands are available:
+
+| Command | Description |
+|---------|-------------|
+| `fli` | Main CLI interface for flight searches |
+| `fli-mcp` | MCP server for STDIO communication |
+| `fli-mcp-http` | MCP server over HTTP at `http://127.0.0.1:8000/mcp/` |
+
+## Development installation
+
+If you want to contribute to Fli or run it from source:
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/punitarani/fli.git
+    cd fli
+    ```
+  </Step>
+
+  <Step title="Install with development dependencies">
+    ```bash
+    # Using uv (recommended)
+    uv sync --all-extras
+
+    # Or using pip
+    pip install -e ".[dev]"
+    ```
+  </Step>
+
+  <Step title="Verify development setup">
+    ```bash
+    # Run tests
+    uv run pytest
+
+    # Run linting
+    uv run ruff check .
+
+    # Run CLI from source
+    uv run fli --help
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Command not found: fli">
+    If you installed with pipx, make sure pipx's bin directory is in your PATH:
+
+    ```bash
+    python3 -m pipx ensurepath
+    ```
+
+    Then restart your terminal or run:
+
+    ```bash
+    source ~/.bashrc  # or ~/.zshrc on macOS
+    ```
+  </Accordion>
+
+  <Accordion title="Python version error">
+    Fli requires Python 3.10 or higher. Check your Python version:
+
+    ```bash
+    python3 --version
+    ```
+
+    If you need to install a newer Python version, use:
+    - **macOS**: `brew install python@3.12`
+    - **Linux**: `sudo apt install python3.12` (Ubuntu/Debian)
+    - **Windows**: Download from [python.org](https://www.python.org/downloads/)
+  </Accordion>
+
+  <Accordion title="Permission denied errors">
+    If you encounter permission errors during installation:
+
+    ```bash
+    # Use --user flag with pip
+    pip install --user flights
+
+    # Or use pipx (recommended)
+    pipx install flights
+    ```
+  </Accordion>
+
+  <Accordion title="Import errors">
+    If you can't import Fli modules, ensure you're in the correct environment:
+
+    ```bash
+    # Check if Fli is installed
+    pip list | grep flights
+
+    # Reinstall if necessary
+    pip install --force-reinstall flights
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quick start" icon="rocket" href="/quickstart">
+    Get started with your first flight search
+  </Card>
+  <Card title="MCP Server setup" icon="server" href="/mcp/overview">
+    Configure the MCP server for Claude Desktop
+  </Card>
+</CardGroup>

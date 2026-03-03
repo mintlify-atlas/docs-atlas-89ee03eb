@@ -1,0 +1,312 @@
+---
+title: Filtering flight results
+description: Learn how to filter flights by cabin class, stops, airlines, time windows, and sorting options
+---
+
+Fli provides comprehensive filtering options to help you find exactly the flights you need. All filters can be combined to create highly targeted searches.
+
+## Cabin class
+
+Filter flights by cabin class using the `SeatType` enum:
+
+```python
+from fli.models import SeatType, FlightSearchFilters, PassengerInfo, FlightSegment, Airport
+
+filters = FlightSearchFilters(
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LAX, 0]],
+            travel_date="2026-04-15"
+        )
+    ],
+    seat_type=SeatType.BUSINESS  # Filter for business class
+)
+```
+
+### Available cabin classes
+
+- `SeatType.ECONOMY` - Economy class (default)
+- `SeatType.PREMIUM_ECONOMY` - Premium economy
+- `SeatType.BUSINESS` - Business class
+- `SeatType.FIRST` - First class
+
+## Stops
+
+Control the maximum number of stops using the `MaxStops` enum:
+
+```python
+from fli.models import MaxStops
+
+filters = FlightSearchFilters(
+    # ... other parameters
+    stops=MaxStops.NON_STOP  # Only direct flights
+)
+```
+
+### Available stop options
+
+- `MaxStops.ANY` - Any number of stops (default)
+- `MaxStops.NON_STOP` - Direct flights only
+- `MaxStops.ONE_STOP_OR_FEWER` - Maximum one stop
+- `MaxStops.TWO_OR_FEWER_STOPS` - Maximum two stops
+
+<Note>
+The `MaxStops` enum uses internal values (0-3) but provides descriptive names for clarity.
+</Note>
+
+## Airlines
+
+Restrict results to specific airlines by passing a list of `Airline` enums:
+
+```python
+from fli.models import Airline
+
+filters = FlightSearchFilters(
+    # ... other parameters
+    airlines=[Airline.BA, Airline.VS]  # British Airways and Virgin Atlantic only
+)
+```
+
+### Common airline codes
+
+<Accordion title="View common airline codes">
+- `Airline.AA` - American Airlines
+- `Airline.BA` - British Airways
+- `Airline.DL` - Delta Air Lines
+- `Airline.UA` - United Airlines
+- `Airline.AF` - Air France
+- `Airline.LH` - Lufthansa
+- `Airline.VS` - Virgin Atlantic
+- `Airline.AC` - Air Canada
+- `Airline.JL` - Japan Airlines
+- `Airline.QF` - Qantas
+
+See the [Airline enum](https://github.com/fli-app/fli/blob/main/fli/models/airline.py) for the complete list of supported airlines.
+</Accordion>
+
+<Warning>
+The airlines filter only includes flights operated by the specified carriers. Codeshare flights may not appear in results.
+</Warning>
+
+## Time windows
+
+Restrict departure and arrival times using `TimeRestrictions`. All times are in hours from midnight (0-23) in local time:
+
+```python
+from fli.models import TimeRestrictions
+
+filters = FlightSearchFilters(
+    # ... other parameters
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LAX, 0]],
+            travel_date="2026-04-15",
+            time_restrictions=TimeRestrictions(
+                earliest_departure=6,   # 6:00 AM
+                latest_departure=10,     # 10:00 AM
+                earliest_arrival=12,     # 12:00 PM
+                latest_arrival=18        # 6:00 PM
+            )
+        )
+    ]
+)
+```
+
+### Time restriction parameters
+
+- `earliest_departure` - Earliest departure time (0-23)
+- `latest_departure` - Latest departure time (0-23)
+- `earliest_arrival` - Earliest arrival time (0-23)
+- `latest_arrival` - Latest arrival time (0-23)
+
+All parameters are optional. You can specify only departure times, only arrival times, or any combination.
+
+<Accordion title="Complete example with time restrictions">
+```python
+from datetime import datetime, timedelta
+from fli.models import (
+    Airport,
+    FlightSearchFilters,
+    FlightSegment,
+    PassengerInfo,
+    TimeRestrictions,
+)
+from fli.search import SearchFlights
+
+filters = FlightSearchFilters(
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LAX, 0]],
+            travel_date=(datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+            time_restrictions=TimeRestrictions(
+                earliest_departure=6,  # 6 AM
+                latest_departure=10,   # 10 AM
+                earliest_arrival=12,   # 12 PM
+                latest_arrival=18,     # 6 PM
+            ),
+        )
+    ],
+)
+
+search = SearchFlights()
+results = search.search(filters)
+```
+</Accordion>
+
+## Sorting
+
+Sort flight results using the `SortBy` enum:
+
+```python
+from fli.models import SortBy
+
+filters = FlightSearchFilters(
+    # ... other parameters
+    sort_by=SortBy.CHEAPEST  # Sort by lowest price
+)
+```
+
+### Available sorting options
+
+- `SortBy.NONE` - Default Google Flights sorting (default)
+- `SortBy.TOP_FLIGHTS` - Google's recommended flights
+- `SortBy.CHEAPEST` - Lowest price first
+- `SortBy.DEPARTURE_TIME` - Earliest departure first
+- `SortBy.ARRIVAL_TIME` - Earliest arrival first
+- `SortBy.DURATION` - Shortest duration first
+
+<Note>
+The `TOP_FLIGHTS` option uses Google's algorithm to balance price, duration, and convenience.
+</Note>
+
+## Advanced filtering
+
+### Duration limits
+
+Set a maximum total flight duration in minutes:
+
+```python
+filters = FlightSearchFilters(
+    # ... other parameters
+    max_duration=720  # Maximum 12 hours (720 minutes)
+)
+```
+
+### Layover restrictions
+
+Control layover airports and maximum layover duration:
+
+```python
+from fli.models import LayoverRestrictions
+
+filters = FlightSearchFilters(
+    # ... other parameters
+    layover_restrictions=LayoverRestrictions(
+        airports=[Airport.BOS, Airport.ORD],  # Prefer these layover airports
+        max_duration=180  # Maximum 3-hour layover (in minutes)
+    )
+)
+```
+
+### Price limits
+
+Set a maximum price for flights:
+
+```python
+from fli.models import PriceLimit, Currency
+
+filters = FlightSearchFilters(
+    # ... other parameters
+    price_limit=PriceLimit(
+        max_price=500,
+        currency=Currency.USD
+    )
+)
+```
+
+<Warning>
+Currently only USD is supported for price limits.
+</Warning>
+
+## Combining filters
+
+All filters can be combined for highly specific searches:
+
+```python
+from datetime import datetime, timedelta
+from fli.models import (
+    Airline,
+    Airport,
+    FlightSearchFilters,
+    FlightSegment,
+    LayoverRestrictions,
+    MaxStops,
+    PassengerInfo,
+    SeatType,
+    TimeRestrictions,
+    SortBy,
+)
+from fli.search import SearchFlights
+
+filters = FlightSearchFilters(
+    passenger_info=PassengerInfo(adults=2, children=1, infants_on_lap=1),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LHR, 0]],
+            travel_date=(datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+            time_restrictions=TimeRestrictions(
+                earliest_departure=8,
+                latest_departure=14
+            )
+        )
+    ],
+    seat_type=SeatType.BUSINESS,
+    stops=MaxStops.ONE_STOP_OR_FEWER,
+    airlines=[Airline.BA, Airline.VS],
+    max_duration=720,
+    layover_restrictions=LayoverRestrictions(
+        airports=[Airport.BOS, Airport.ORD],
+        max_duration=180
+    ),
+    sort_by=SortBy.CHEAPEST
+)
+
+search = SearchFlights()
+results = search.search(filters)
+```
+
+## Filter validation
+
+Fli uses Pydantic models to validate all filter parameters. Invalid values will raise a `ValidationError`:
+
+```python
+from pydantic import ValidationError
+
+try:
+    filters = FlightSearchFilters(
+        passenger_info=PassengerInfo(adults=1),
+        flight_segments=[
+            FlightSegment(
+                departure_airport=[[Airport.JFK, 0]],
+                arrival_airport=[[Airport.JFK, 0]],  # Same as departure!
+                travel_date="2026-04-15"
+            )
+        ]
+    )
+except ValidationError as e:
+    print(e)  # "Departure and arrival airports must be different"
+```
+
+<Note>
+Common validation errors include:
+- Same departure and arrival airports
+- Travel dates in the past
+- Invalid time ranges (earliest > latest)
+- Missing required fields
+</Note>

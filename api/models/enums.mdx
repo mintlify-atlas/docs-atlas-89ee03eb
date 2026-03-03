@@ -1,0 +1,155 @@
+---
+title: Enum types
+description: Enumeration types for flight search options and constraints
+---
+
+## SeatType
+
+Available cabin classes for flights.
+
+<ResponseField name="ECONOMY" type="int" default="1">
+  Economy class seating
+</ResponseField>
+
+<ResponseField name="PREMIUM_ECONOMY" type="int" default="2">
+  Premium economy class with extra legroom and amenities
+</ResponseField>
+
+<ResponseField name="BUSINESS" type="int" default="3">
+  Business class seating
+</ResponseField>
+
+<ResponseField name="FIRST" type="int" default="4">
+  First class seating
+</ResponseField>
+
+### Usage
+
+```python
+from fli.models import SeatType
+
+# Use in flight search
+seat_type = SeatType.BUSINESS
+seat_type = SeatType.ECONOMY
+```
+
+## MaxStops
+
+Maximum number of stops allowed in flight search.
+
+<ResponseField name="ANY" type="int" default="0">
+  Any number of stops allowed
+</ResponseField>
+
+<ResponseField name="NON_STOP" type="int" default="1">
+  Non-stop flights only (direct flights)
+</ResponseField>
+
+<ResponseField name="ONE_STOP_OR_FEWER" type="int" default="2">
+  Maximum of one stop allowed
+</ResponseField>
+
+<ResponseField name="TWO_OR_FEWER_STOPS" type="int" default="3">
+  Maximum of two stops allowed
+</ResponseField>
+
+### Usage
+
+```python
+from fli.models import MaxStops
+
+# Filter for non-stop flights only
+stops = MaxStops.NON_STOP
+
+# Allow up to one stop
+stops = MaxStops.ONE_STOP_OR_FEWER
+```
+
+## SortBy
+
+Available sorting options for flight results.
+
+<ResponseField name="NONE" type="int" default="0">
+  No specific sorting (default Google Flights ordering)
+</ResponseField>
+
+<ResponseField name="TOP_FLIGHTS" type="int" default="1">
+  Sort by Google Flights' recommended top flights
+</ResponseField>
+
+<ResponseField name="CHEAPEST" type="int" default="2">
+  Sort by price (lowest to highest)
+</ResponseField>
+
+<ResponseField name="DEPARTURE_TIME" type="int" default="3">
+  Sort by departure time (earliest to latest)
+</ResponseField>
+
+<ResponseField name="ARRIVAL_TIME" type="int" default="4">
+  Sort by arrival time (earliest to latest)
+</ResponseField>
+
+<ResponseField name="DURATION" type="int" default="5">
+  Sort by total flight duration (shortest to longest)
+</ResponseField>
+
+### Usage
+
+```python
+from fli.models import SortBy
+
+# Sort by cheapest flights
+sort_by = SortBy.CHEAPEST
+
+# Sort by shortest duration
+sort_by = SortBy.DURATION
+```
+
+## TripType
+
+Type of flight journey.
+
+<ResponseField name="ROUND_TRIP" type="int" default="1">
+  Round trip flight (outbound and return)
+</ResponseField>
+
+<ResponseField name="ONE_WAY" type="int" default="2">
+  One-way flight
+</ResponseField>
+
+<Note>
+  Multi-city trips (`_MULTI_CITY = 3`) are currently not supported and kept for reference only.
+</Note>
+
+### Usage
+
+```python
+from fli.models import TripType
+
+# Search for round trip flights
+trip_type = TripType.ROUND_TRIP
+
+# Search for one-way flights
+trip_type = TripType.ONE_WAY
+```
+
+## Currency
+
+Supported currencies for pricing.
+
+<ResponseField name="USD" type="str" default="USD">
+  United States Dollar
+</ResponseField>
+
+<Note>
+  Currently only USD is supported. Additional currencies are planned for future releases.
+</Note>
+
+### Usage
+
+```python
+from fli.models.google_flights.base import Currency
+
+# Set currency for price limit
+currency = Currency.USD
+```

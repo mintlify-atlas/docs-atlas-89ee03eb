@@ -1,0 +1,378 @@
+---
+title: dates command
+description: Find the cheapest dates to fly within a flexible date range
+---
+
+The `dates` command searches for the cheapest dates to fly between two airports within a specified date range. Perfect for flexible travelers looking for the best deals.
+
+## Syntax
+
+```bash
+fli dates ORIGIN DESTINATION [OPTIONS]
+```
+
+### Required arguments
+
+- `ORIGIN` - Departure airport IATA code (e.g., JFK, LAX, LHR)
+- `DESTINATION` - Arrival airport IATA code
+
+## Options
+
+### Date range
+
+```bash
+--from DATE
+```
+
+Start of the search date range in YYYY-MM-DD format.
+
+**Default:** Tomorrow
+
+```bash
+--to DATE
+```
+
+End of the search date range in YYYY-MM-DD format.
+
+**Default:** 60 days from today
+
+**Example:**
+```bash
+fli dates LAX MIA --from 2025-12-01 --to 2025-12-31
+```
+
+### Trip duration
+
+```bash
+--duration DAYS, -d DAYS
+```
+
+Number of days for the trip. Used for round-trip searches to calculate return dates.
+
+**Default:** 3 days
+
+**Example:**
+```bash
+fli dates JFK LAX --duration 7 --round
+```
+
+### Round-trip toggle
+
+```bash
+--round, -R
+```
+
+Search for round-trip flights instead of one-way.
+
+**Default:** False (one-way search)
+
+**Example:**
+```bash
+fli dates SFO NYC --round --duration 5
+```
+
+### Airlines
+
+```bash
+--airlines CODES, -a CODES
+```
+
+Filter by specific airlines using IATA codes. Provide multiple codes separated by spaces.
+
+**Default:** All airlines
+
+**Example:**
+```bash
+fli dates JFK LHR --airlines BA AA
+```
+
+### Maximum stops
+
+```bash
+--stops STOPS, -s STOPS
+```
+
+Filter by maximum number of stops.
+
+**Options:**
+- `ANY` (default) - Any number of stops
+- `0` or `NON_STOP` - Non-stop flights only
+- `1` or `ONE_STOP` - Maximum one stop
+- `2+` or `TWO_PLUS_STOPS` - Two or more stops
+
+**Example:**
+```bash
+fli dates LAX JFK --stops 0
+```
+
+### Cabin class
+
+```bash
+--class CLASS, -c CLASS
+```
+
+Specify the cabin class for the search.
+
+**Options:**
+- `ECONOMY` (default)
+- `PREMIUM_ECONOMY`
+- `BUSINESS`
+- `FIRST`
+
+**Example:**
+```bash
+fli dates SFO NRT --class BUSINESS
+```
+
+### Sort by price
+
+```bash
+--sort
+```
+
+Sort results by price from lowest to highest.
+
+**Default:** False (chronological order)
+
+**Example:**
+```bash
+fli dates BOS LAX --from 2025-10-01 --to 2025-10-31 --sort
+```
+
+### Day of week filters
+
+Filter results to only show flights departing on specific days of the week.
+
+```bash
+--monday, -mon      # Include Mondays
+--tuesday, -tue     # Include Tuesdays
+--wednesday, -wed   # Include Wednesdays
+--thursday, -thu    # Include Thursdays
+--friday, -fri      # Include Fridays
+--saturday, -sat    # Include Saturdays
+--sunday, -sun      # Include Sundays
+```
+
+**Default:** All days included
+
+**Example (weekend departures only):**
+```bash
+fli dates JFK LAX --friday --saturday --sunday
+```
+
+**Example (weekday departures only):**
+```bash
+fli dates LAX JFK --monday --tuesday --wednesday --thursday --friday
+```
+
+### Departure time window
+
+```bash
+--time RANGE
+```
+
+Filter flights by departure time using 24-hour format. Specify as `START-END` (e.g., `6-20` for 6 AM to 8 PM).
+
+**Default:** Any time
+
+**Example:**
+```bash
+fli dates SFO BOS --time 6-12
+```
+
+## Examples
+
+### Basic date search
+
+```bash
+fli dates LAX MIA
+```
+
+Searches for the cheapest one-way flights from Los Angeles to Miami over the next 60 days.
+
+### Specific date range
+
+```bash
+fli dates JFK LHR --from 2025-12-01 --to 2025-12-31
+```
+
+Searches for flights in December 2025.
+
+### Weekend getaway
+
+```bash
+fli dates SFO LAX --friday --saturday --sunday --duration 3 --round
+```
+
+Searches for 3-day round-trip weekend getaways departing on Friday, Saturday, or Sunday.
+
+### Business class week-long trip
+
+```bash
+fli dates JFK NRT --class BUSINESS --duration 7 --round --from 2025-11-01 --to 2025-11-30
+```
+
+Searches for 7-day round-trip business class flights to Tokyo in November.
+
+### Non-stop flights sorted by price
+
+```bash
+fli dates LAX JFK --stops 0 --sort
+```
+
+Searches for non-stop flights, showing the cheapest dates first.
+
+### Midweek departures with specific airlines
+
+```bash
+fli dates BOS MIA --tuesday --wednesday --thursday --airlines AA DL --sort
+```
+
+Searches for Tuesday, Wednesday, or Thursday departures on American or Delta, sorted by price.
+
+### Morning flights for a long trip
+
+```bash
+fli dates LAX SYD --time 6-12 --duration 14 --round --class PREMIUM_ECONOMY
+```
+
+Searches for 14-day round-trip premium economy flights with morning departures.
+
+### Complete example with all filters
+
+```bash
+fli dates JFK LAX \
+  --from 2025-10-01 \
+  --to 2025-10-31 \
+  --duration 5 \
+  --round \
+  --class ECONOMY \
+  --stops 0 \
+  --airlines AA DL UA \
+  --friday --saturday \
+  --time 8-18 \
+  --sort
+```
+
+Searches for:
+- Round-trip flights from JFK to LAX
+- 5-day trips in October 2025
+- Economy class, non-stop only
+- American, Delta, or United only
+- Friday or Saturday departures
+- Daytime flights (8 AM - 6 PM)
+- Results sorted by price
+
+## Output format
+
+The command displays results with a price trend chart followed by a detailed table:
+
+```
+Price Trend
+
+800 ┤                                    ╭╮
+750 ┤                          ╭╮       ││
+700 ┤                    ╭╮    ││╭╮    ╭╯│
+650 ┤              ╭╮    ││╭╮  │││╰╮   │ │
+600 ┤        ╭╮    ││╭╮  │││╰╮╭╯│  │  ╭╯ │
+550 ┼────────╯╰────╯│╰──╯││ ╰╯ │  ╰──╯  ╰
+    └──────────────────────────────────────
+        Date
+
+╭─ Cheapest Dates to Fly ──────────────────────────────╮
+│ Departure  │ Day       │ Return     │ Day       │ Price      │
+├────────────┼───────────┼────────────┼───────────┼────────────┤
+│ 2025-10-03 │ Friday    │ 2025-10-06 │ Monday    │ $524.80    │
+│ 2025-10-10 │ Friday    │ 2025-10-13 │ Monday    │ $548.60    │
+│ 2025-10-17 │ Friday    │ 2025-10-20 │ Monday    │ $612.40    │
+│ 2025-10-24 │ Friday    │ 2025-10-27 │ Monday    │ $689.20    │
+╰──────────────────────────────────────────────────────────────╯
+```
+
+For one-way searches, the table shows:
+- Departure date and day of week
+- Price
+
+For round-trip searches, the table also includes:
+- Return date and day of week
+
+<Note>
+The price trend chart helps visualize the best times to fly within your date range.
+</Note>
+
+## Understanding results
+
+### One-way vs round-trip
+
+**One-way searches** return individual departure dates with their prices.
+
+**Round-trip searches** return departure dates paired with return dates based on your specified duration. For example, with `--duration 7`, a departure on October 1st will show a return on October 8th.
+
+### Day filters
+
+Day of week filters apply to the **departure date** only. For round-trip searches, the return date is automatically calculated based on the duration.
+
+```bash
+fli dates JFK LAX --friday --duration 7 --round
+```
+
+This finds trips departing on Fridays with returns 7 days later (the following Friday).
+
+### Sorting
+
+By default, results are shown in **chronological order** (earliest departure first). Use `--sort` to see the cheapest options first, regardless of date.
+
+## Error handling
+
+The command validates inputs and provides clear error messages:
+
+**Invalid date format:**
+```
+Error: Date must be in YYYY-MM-DD format
+```
+
+**Invalid airport code:**
+```
+Error: Invalid airport code: XYZ
+```
+
+**No flights found:**
+```
+No flights found for these dates.
+```
+
+**No flights on selected days:**
+```
+No flights found for the selected days.
+```
+
+## Tips
+
+<Tip>
+Use day filters to find weekend getaways:
+```bash
+fli dates JFK MIA --friday --saturday --duration 3 --round
+```
+</Tip>
+
+<Tip>
+Combine `--sort` with day filters to find the absolute cheapest dates on your preferred days:
+```bash
+fli dates LAX NYC --tuesday --wednesday --thursday --sort
+```
+</Tip>
+
+<Tip>
+For business trips, filter to weekday departures and returns:
+```bash
+fli dates BOS SFO --monday --tuesday --wednesday --duration 3 --round
+```
+</Tip>
+
+<Tip>
+Once you find a good date, use the [flights command](/cli/flights-command) to see specific flight options:
+```bash
+fli dates LAX JFK --sort  # Find cheapest date
+fli flights LAX JFK 2025-10-15  # Search specific date
+```
+</Tip>

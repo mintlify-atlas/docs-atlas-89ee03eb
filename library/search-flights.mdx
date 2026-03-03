@@ -1,0 +1,502 @@
+---
+title: SearchFlights
+description: Search for flights on specific dates with detailed filters
+---
+
+The `SearchFlights` class provides direct access to Google Flights data for specific travel dates. It supports one-way and round-trip searches with comprehensive filtering options.
+
+## Basic usage
+
+### One-way search
+
+Search for one-way flights between two airports:
+
+```python
+from datetime import datetime, timedelta
+from fli.models import (
+    Airport,
+    FlightSearchFilters,
+    FlightSegment,
+    PassengerInfo,
+    SeatType,
+    MaxStops,
+    SortBy,
+)
+from fli.search import SearchFlights
+
+# Create search filters
+filters = FlightSearchFilters(
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LAX, 0]],
+            travel_date=(datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+        )
+    ],
+    seat_type=SeatType.ECONOMY,
+    stops=MaxStops.NON_STOP,
+    sort_by=SortBy.CHEAPEST,
+)
+
+# Search flights
+search = SearchFlights()
+flights = search.search(filters)
+
+# Process results
+for flight in flights:
+    print(f"Price: ${flight.price}")
+    print(f"Duration: {flight.duration} minutes")
+    print(f"Stops: {flight.stops}")
+    
+    for leg in flight.legs:
+        print(f"Flight: {leg.airline.value} {leg.flight_number}")
+        print(f"From: {leg.departure_airport.value} at {leg.departure_datetime}")
+        print(f"To: {leg.arrival_airport.value} at {leg.arrival_datetime}")
+```
+
+<Info>
+  This example comes from `examples/basic_one_way_search.py` in the source code.
+</Info>
+
+### Round-trip search
+
+Search for round-trip flights with outbound and return segments:
+
+```python
+from datetime import datetime, timedelta
+from fli.models import (
+    Airport,
+    FlightSearchFilters,
+    FlightSegment,
+    PassengerInfo,
+    TripType,
+)
+from fli.search import SearchFlights
+
+# Create flight segments for round trip
+outbound_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+return_date = (datetime.now() + timedelta(days=37)).strftime("%Y-%m-%d")
+
+flight_segments = [
+    FlightSegment(
+        departure_airport=[[Airport.JFK, 0]],
+        arrival_airport=[[Airport.LAX, 0]],
+        travel_date=outbound_date,
+    ),
+    FlightSegment(
+        departure_airport=[[Airport.LAX, 0]],
+        arrival_airport=[[Airport.JFK, 0]],
+        travel_date=return_date,
+    ),
+]
+
+# Create filters
+filters = FlightSearchFilters(
+    trip_type=TripType.ROUND_TRIP,
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=flight_segments,
+)
+
+# Search flights
+search = SearchFlights()
+results = search.search(filters)
+
+# Process results - note the tuple structure for round trips
+for outbound, return_flight in results:
+    print("\nOutbound Flight:")
+    for leg in outbound.legs:
+        print(f"Flight: {leg.airline.value} {leg.flight_number}")
+        print(f"Departure: {leg.departure_datetime}")
+        print(f"Arrival: {leg.arrival_datetime}")
+    
+    print("\nReturn Flight:")
+    for leg in return_flight.legs:
+        print(f"Flight: {leg.airline.value} {leg.flight_number}")
+        print(f"Departure: {leg.departure_datetime}")
+        print(f"Arrival: {leg.arrival_datetime}")
+    
+    print(f"\nTotal Price: ${outbound.price + return_flight.price}")
+```
+
+<Info>
+  This example comes from `examples/round_trip_search.py` in the source code.
+</Info>
+
+## Advanced filtering
+
+### Time restrictions
+
+Filter flights by departure and arrival times:
+
+```python
+from fli.models import TimeRestrictions
+
+filters = FlightSearchFilters(
+    trip_type=TripType.ONE_WAY,
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LAX, 0]],
+            travel_date=(datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+            time_restrictions=TimeRestrictions(
+                earliest_departure=6,   # 6 AM
+                latest_departure=10,    # 10 AM
+                earliest_arrival=12,    # 12 PM
+                latest_arrival=18,      # 6 PM
+            ),
+        )
+    ],
+)
+```
+
+<Info>
+  See `examples/time_restrictions_search.py` for a complete working example.
+</Info>
+
+### Multiple passengers
+
+Search for family travel with multiple passenger types:
+
+```python
+from fli.models import PassengerInfo
+
+filters = FlightSearchFilters(
+    passenger_info=PassengerInfo(
+        adults=2,
+        children=1,
+        infants_on_lap=1,
+    ),
+    flight_segments=[...],
+)
+```
+
+### Airline preferences
+
+Filter by specific airlines:
+
+```python
+from fli.models import Airline
+
+filters = FlightSearchFilters(
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[...],
+    airlines=[Airline.BA, Airline.VS],  # British Airways and Virgin Atlantic only
+)
+```
+
+### Layover restrictions
+
+Control layover airports and duration:
+
+```python
+from fli.models import LayoverRestrictions
+
+filters = FlightSearchFilters(
+    passenger_info=PassengerInfo(adults=1),
+    flight_segments=[...],
+    layover_restrictions=LayoverRestrictions(
+        airports=[Airport.BOS, Airport.ORD],  # Prefer these layover airports
+        max_duration=180,                      # Maximum 3-hour layover
+    ),
+)
+```
+
+### Complex search
+
+Combine multiple filters for precise results:
+
+```python
+from fli.models import (
+    Airline,
+    Airport,
+    FlightSearchFilters,
+    FlightSegment,
+    LayoverRestrictions,
+    MaxStops,
+    PassengerInfo,
+    SeatType,
+    TripType,
+)
+from fli.search import SearchFlights
+
+filters = FlightSearchFilters(
+    trip_type=TripType.ONE_WAY,
+    passenger_info=PassengerInfo(adults=2, children=1, infants_on_lap=1),
+    flight_segments=[
+        FlightSegment(
+            departure_airport=[[Airport.JFK, 0]],
+            arrival_airport=[[Airport.LHR, 0]],
+            travel_date=(datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+        )
+    ],
+    seat_type=SeatType.BUSINESS,
+    stops=MaxStops.ONE_STOP_OR_FEWER,
+    airlines=[Airline.BA, Airline.VS],
+    max_duration=720,  # 12 hours in minutes
+    layover_restrictions=LayoverRestrictions(
+        airports=[Airport.BOS, Airport.ORD],
+        max_duration=180,
+    ),
+)
+
+search = SearchFlights()
+results = search.search(filters)
+
+print(f"Found {len(results)} flights:")
+for i, flight in enumerate(results, 1):
+    print(f"\n--- Flight {i} ---")
+    print(f"Price: ${flight.price}")
+    print(f"Duration: {flight.duration} minutes")
+    print(f"Stops: {flight.stops}")
+    
+    for j, leg in enumerate(flight.legs, 1):
+        print(f"\nLeg {j}: {leg.airline.value} {leg.flight_number}")
+        print(f"  From: {leg.departure_airport.value} at {leg.departure_datetime}")
+        print(f"  To: {leg.arrival_airport.value} at {leg.arrival_datetime}")
+        print(f"  Duration: {leg.duration} minutes")
+```
+
+<Info>
+  This example comes from `examples/complex_flight_search.py` in the source code.
+</Info>
+
+## API reference
+
+### SearchFlights class
+
+Defined in `fli/search/flights.py:22`.
+
+#### Constructor
+
+```python
+SearchFlights()
+```
+
+Creates a new instance with an initialized HTTP client. The client includes:
+- Automatic rate limiting (10 requests/second)
+- Retry logic with exponential backoff (up to 3 attempts)
+- Browser impersonation for API access
+
+#### search() method
+
+```python
+def search(
+    self,
+    filters: FlightSearchFilters,
+    top_n: int = 5
+) -> list[FlightResult | tuple[FlightResult, FlightResult]] | None
+```
+
+**Parameters:**
+- `filters` (FlightSearchFilters): Complete search configuration including airports, dates, and preferences
+- `top_n` (int): Number of outbound flights to consider for round-trip searches (default: 5)
+
+**Returns:**
+- For one-way searches: `list[FlightResult]` or `None`
+- For round-trip searches: `list[tuple[FlightResult, FlightResult]]` or `None`
+- Returns `None` if no flights are found
+
+**Raises:**
+- `Exception`: If the search fails or returns invalid data
+
+**Implementation notes:**
+- Round-trip searches make multiple API calls to get return flight options
+- The `top_n` parameter limits how many outbound flights are used to find returns
+- Results are automatically parsed from Google Flights API response
+
+See implementation at `fli/search/flights.py:38-99`.
+
+### FlightSearchFilters
+
+Complete search configuration object.
+
+**Required fields:**
+- `passenger_info` (PassengerInfo): Passenger counts
+- `flight_segments` (list[FlightSegment]): One or more flight segments
+
+**Optional fields:**
+- `trip_type` (TripType): `ONE_WAY` or `ROUND_TRIP` (default: `ONE_WAY`)
+- `seat_type` (SeatType): Cabin class preference
+- `stops` (MaxStops): Stop preferences
+- `airlines` (list[Airline]): Filter by specific airlines
+- `max_duration` (int): Maximum flight duration in minutes
+- `sort_by` (SortBy): Result sorting preference
+- `layover_restrictions` (LayoverRestrictions): Layover preferences
+
+### FlightSegment
+
+Defines a single journey segment.
+
+**Required fields:**
+- `departure_airport` (list[list]): Origin airport as `[[Airport.CODE, 0]]`
+- `arrival_airport` (list[list]): Destination airport as `[[Airport.CODE, 0]]`
+- `travel_date` (str): Date in `YYYY-MM-DD` format
+
+**Optional fields:**
+- `time_restrictions` (TimeRestrictions): Departure/arrival time constraints
+- `selected_flight` (FlightResult): Pre-selected flight for return searches
+
+### FlightResult
+
+Contains complete flight information.
+
+**Fields:**
+- `price` (float): Total flight price
+- `duration` (int): Total duration in minutes
+- `stops` (int): Number of stops (0 for non-stop)
+- `legs` (list[FlightLeg]): Individual flight legs
+
+### FlightLeg
+
+Details for a single flight.
+
+**Fields:**
+- `airline` (Airline): Operating airline
+- `flight_number` (str): Flight number
+- `departure_airport` (Airport): Origin airport
+- `arrival_airport` (Airport): Destination airport
+- `departure_datetime` (datetime): Departure time
+- `arrival_datetime` (datetime): Arrival time
+- `duration` (int): Flight duration in minutes
+
+## Result processing
+
+Process and analyze search results with custom logic:
+
+```python
+def analyze_results(results: list[FlightResult]) -> dict:
+    """Convert results to dictionary format for analysis."""
+    flights_data = []
+    
+    for flight in results:
+        for leg in flight.legs:
+            flights_data.append({
+                "price": flight.price,
+                "total_duration": flight.duration,
+                "stops": flight.stops,
+                "airline": leg.airline.value,
+                "flight_number": leg.flight_number,
+                "departure_airport": leg.departure_airport.value,
+                "arrival_airport": leg.arrival_airport.value,
+                "departure_time": leg.departure_datetime,
+                "arrival_time": leg.arrival_datetime,
+                "leg_duration": leg.duration,
+            })
+    
+    return flights_data
+
+# Basic statistics
+prices = [flight.price for flight in results]
+print(f"Price range: ${min(prices)} - ${max(prices)}")
+print(f"Average price: ${sum(prices) / len(prices):.2f}")
+```
+
+<Info>
+  See `examples/result_processing.py` for comprehensive analysis examples including pandas integration.
+</Info>
+
+## Error handling
+
+Implement robust error handling for production use:
+
+```python
+def simple_retry_search(filters: FlightSearchFilters, max_attempts=3):
+    """Simple retry logic without external dependencies."""
+    search = SearchFlights()
+    
+    for attempt in range(max_attempts):
+        try:
+            print(f"Attempt {attempt + 1}/{max_attempts}")
+            results = search.search(filters)
+            if not results:
+                raise ValueError("No results found")
+            return results
+        except Exception as e:
+            print(f"Search failed: {str(e)}")
+            if attempt == max_attempts - 1:  # Last attempt
+                raise
+            print("Retrying...")
+    
+    return None
+```
+
+<Info>
+  The HTTP client already includes retry logic at `fli/search/client.py:39,63`. See `examples/error_handling_with_retries.py` for advanced patterns using tenacity.
+</Info>
+
+## Best practices
+
+<AccordionGroup>
+  <Accordion title="Use specific dates">
+    SearchFlights requires exact travel dates. For flexible date searches, use [SearchDates](/library/search-dates) instead.
+  </Accordion>
+  
+  <Accordion title="Handle None results">
+    Always check if results is `None` before processing. No results doesn't raise an exception.
+    
+    ```python
+    results = search.search(filters)
+    if not results:
+        print("No flights found")
+        return
+    ```
+  </Accordion>
+  
+  <Accordion title="Round-trip result structure">
+    Round-trip searches return tuples of `(outbound, return)` flights. Make sure to unpack them:
+    
+    ```python
+    for outbound, return_flight in results:
+        total_price = outbound.price + return_flight.price
+    ```
+  </Accordion>
+  
+  <Accordion title="Limit round-trip combinations">
+    Use the `top_n` parameter to control how many outbound flights are used for round-trip searches:
+    
+    ```python
+    # Only get returns for the 3 cheapest outbound flights
+    results = search.search(filters, top_n=3)
+    ```
+  </Accordion>
+  
+  <Accordion title="Date format">
+    Always use `YYYY-MM-DD` format for dates:
+    
+    ```python
+    travel_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Examples
+
+Explore complete working examples:
+
+<CardGroup cols={2}>
+  <Card title="Basic one-way search" icon="plane" href="/library/examples#basic-one-way-search">
+    Simple flight search between two airports
+  </Card>
+  <Card title="Round-trip search" icon="plane-arrival" href="/library/examples#round-trip-search">
+    Search for outbound and return flights
+  </Card>
+  <Card title="Complex flight search" icon="filter" href="/library/examples#complex-flight-search">
+    Multi-filter search with layovers and preferences
+  </Card>
+  <Card title="Time restrictions" icon="clock" href="/library/examples#time-restrictions-search">
+    Filter by departure and arrival times
+  </Card>
+</CardGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="SearchDates" icon="calendar" href="/library/search-dates">
+    Find the cheapest dates to fly
+  </Card>
+  <Card title="All examples" icon="code" href="/library/examples">
+    Browse 11 complete code examples
+  </Card>
+</CardGroup>
