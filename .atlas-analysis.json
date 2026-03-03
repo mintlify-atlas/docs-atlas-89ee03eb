@@ -1,0 +1,119 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Fli",
+  "projectDescription": "Python library for Google Flights data with MCP server and CLI interface",
+  "theme": "palm",
+  "primaryColor": "#0066CC",
+  "lightColor": "#4A9EFF",
+  "darkColor": "#003D7A",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "MCP Server",
+            "pages": [
+              "mcp/overview",
+              "mcp/setup",
+              "mcp/tools",
+              "mcp/configuration"
+            ]
+          },
+          {
+            "group": "CLI Usage",
+            "pages": [
+              "cli/overview",
+              "cli/flights-command",
+              "cli/dates-command"
+            ]
+          },
+          {
+            "group": "Python Library",
+            "pages": [
+              "library/overview",
+              "library/search-flights",
+              "library/search-dates",
+              "library/examples"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/filtering",
+              "guides/error-handling",
+              "guides/advanced-usage"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core",
+            "pages": [
+              "api/search-flights",
+              "api/search-dates"
+            ]
+          },
+          {
+            "group": "Models",
+            "pages": [
+              "api/models/filters",
+              "api/models/results",
+              "api/models/airports-airlines",
+              "api/models/enums"
+            ]
+          },
+          {
+            "group": "Utilities",
+            "pages": [
+              "api/utilities/parsers",
+              "api/utilities/builders"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Direct Google Flights API access (no web scraping)",
+    "MCP server for AI assistant integration",
+    "Rich CLI interface with Typer",
+    "Flight search with advanced filtering (cabin class, stops, airlines, time windows)",
+    "Date range search for finding cheapest travel dates",
+    "Built-in rate limiting and retry logic",
+    "Pydantic models for type safety",
+    "Support for one-way and round-trip flights"
+  ],
+  "publicApiSurface": [
+    "SearchFlights.search()",
+    "SearchDates.search()",
+    "FlightSearchFilters",
+    "DateSearchFilters",
+    "FlightResult",
+    "FlightLeg",
+    "FlightSegment",
+    "PassengerInfo",
+    "Airport (enum)",
+    "Airline (enum)",
+    "SeatType (enum)",
+    "MaxStops (enum)",
+    "SortBy (enum)",
+    "TripType (enum)",
+    "TimeRestrictions",
+    "fli flights (CLI command)",
+    "fli dates (CLI command)",
+    "search_flights (MCP tool)",
+    "search_dates (MCP tool)"
+  ]
+}
